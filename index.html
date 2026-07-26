@@ -1840,9 +1840,19 @@
         
             panel.innerHTML = `<h4 style="text-align:center; margin-top:6rem; color: var(--secondary-color); font-weight: normal;">Conectando con el servidor de Gemini... Por favor espera.</h4>`;
         
+            // AQUI ESTÁ LA MAGIA: Detectamos si es Task 1 o Task 2
+            const isTask1 = task.title.includes("Task 1");
+            const taskCriterion = isTask1 ? "Task Achievement" : "Task Response";
+        
+            // Insertamos el criterio dinámico (${taskCriterion}) dentro del prompt
             const systemPrompt = `Actúas como un examinador oficial experto de IELTS Certificado. Evalúa el siguiente ensayo escrito en base a este enunciado exacto: "${task.prompt}".
             El ensayo del alumno es: "${essay}".
-            Entrega tu respuesta estructurada en HTML limpio (usa etiquetas <p>, <ul>, <li>, <strong>). Debes incluir: 1. Overall Band Score. 2. Puntuación desglosada y retroalimentación breve por cada uno de los 4 criterios oficiales. 3. Correcciones sugeridas. Responde en español, sin bloques markdown.`;
+            
+            Entrega tu respuesta estructurada en HTML limpio (usa etiquetas <p>, <ul>, <li>, <strong>). Debes incluir de forma estricta:
+            1. Overall Band Score (Escala 1.0 a 9.0).
+            2. Puntuación desglosada y retroalimentación breve por cada uno de los 4 criterios oficiales de IELTS (${taskCriterion}, Coherence and Cohesion, Lexical Resource, Grammatical Range and Accuracy).
+            3. Una sección llamada "Correcciones sugeridas" en formato de lista mostrando el texto original y cómo mejorarlo.
+            Responde en español, pero mantén los términos de los criterios y las correcciones en inglés. Importante: No envuelvas tu respuesta en bloques de código markdown.`;
         
             try {
                 const response = await fetch("/.netlify/functions/analyze", {
@@ -1859,7 +1869,6 @@
         
                 const data = JSON.parse(textResponse);
                 
-                // AQUÍ ABRIMOS EL PAQUETE DE GOOGLE PARA LEER EL MENSAJE REAL
                 if (data.error) {
                     const mensajeReal = data.error.message || JSON.stringify(data.error);
                     throw new Error(`Rechazo de Google: ${mensajeReal}`);
@@ -1877,7 +1886,7 @@
                     <div style="color: var(--incorrect-color); padding: 1.5rem; text-align:left; border: 1px dashed var(--incorrect-color); font-size: 0.95rem; background: #fff3f3;">
                         <strong style="font-size:1.1rem;">Diagnóstico del Servidor:</strong><br><br>
                         <code>${error.message}</code><br><br>
-                        <span style="color:#555;">Copia el texto rojo que aparece arriba y envíaselo a Gemini.</span>
+                        <span style="color:#555;">Si el error persiste, revisa tu conexión a internet.</span>
                     </div>`;
             }
         }
