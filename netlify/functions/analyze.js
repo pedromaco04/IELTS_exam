@@ -14,8 +14,8 @@ exports.handler = async function(event, context) {
       };
     }
 
-    // ¡Aquí está la magia! Usamos el modelo gemini-2.5-flash-lite que encontraste
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`, {
+    // ¡La joya de la corona: gemini-3.5-flash-lite!
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
