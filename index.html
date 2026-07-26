@@ -1832,35 +1832,38 @@
             
             const essay = textarea.value.trim();
             const task = ieltsWritingData[currentWritingIndex];
-
+        
             if (!essay) {
                 alert("Por favor, escribe tu respuesta en el cuadro de texto antes de solicitar la evaluación de la IA.");
                 return;
             }
-
+        
             panel.innerHTML = `<h4 style="text-align:center; margin-top:6rem; color: var(--secondary-color); font-weight: normal;">Conectando con el servidor de Gemini... Por favor espera.</h4>`;
-
+        
             const systemPrompt = `Actúas como un examinador oficial experto de IELTS Certificado. Evalúa el siguiente ensayo escrito en base a este enunciado exacto: "${task.prompt}".
             El ensayo del alumno es: "${essay}".
             Entrega tu respuesta estructurada en HTML limpio (usa etiquetas <p>, <ul>, <li>, <strong>). Debes incluir: 1. Overall Band Score. 2. Puntuación desglosada y retroalimentación breve por cada uno de los 4 criterios oficiales. 3. Correcciones sugeridas. Responde en español, sin bloques markdown.`;
-
+        
             try {
                 const response = await fetch("/.netlify/functions/analyze", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ promptText: systemPrompt })
                 });
-
-                // Leemos la respuesta cruda para atrapar el error exacto
+        
                 const textResponse = await response.text(); 
                 
                 if (!response.ok) {
                     throw new Error(`Error de Netlify (HTTP ${response.status}): ${textResponse}`);
                 }
-
+        
                 const data = JSON.parse(textResponse);
                 
-                if (data.error) throw new Error(`Error de la API: ${data.error}`);
+                // AQUÍ ABRIMOS EL PAQUETE DE GOOGLE PARA LEER EL MENSAJE REAL
+                if (data.error) {
+                    const mensajeReal = data.error.message || JSON.stringify(data.error);
+                    throw new Error(`Rechazo de Google: ${mensajeReal}`);
+                }
                 
                 if (data.candidates && data.candidates[0].content.parts[0].text) {
                     let resultText = data.candidates[0].content.parts[0].text;
