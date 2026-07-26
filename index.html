@@ -364,7 +364,16 @@
         <span>Words: <span id="writing-word-count">0</span></span>
         <span id="writing-target-status" style="color: var(--incorrect-color);">Faltan palabras</span>
         </div>
-        <div style="margin-top: 1.5rem; display: flex; gap: 10px;">
+        <div style="margin-top: 1.5rem; display: flex; gap: 10px; flex-wrap: wrap; justify-content: space-between;">
+            <div>
+                <button class="btn btn-nav" style="padding: 0.6rem 1.2rem;" onclick="changeWritingTask(-1)">&#8592; Prev</button>
+                <button class="btn btn-nav" style="padding: 0.6rem 1.2rem;" onclick="changeWritingTask(1)">Next &#8594;</button>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-check" style="padding: 0.6rem 1.5rem; font-size: 1rem;" onclick="checkWritingLocally()">Compare with Model</button>
+                <button class="btn" style="background: #198754; color: white; padding: 0.6rem 1.5rem; font-size: 1rem;" onclick="analyzeWithFreeAI()">AI Evaluation</button>
+            </div>
+        </div>
         <button class="btn btn-check" style="padding: 0.6rem 1.5rem; font-size: 1rem;" onclick="checkWritingLocally()">Compare with Model</button>
         <button class="btn" style="background: #198754; color: white; padding: 0.6rem 1.5rem; font-size: 1rem;" onclick="analyzeWithFreeAI()">AI Evaluation (Free)</button>
         </div>
@@ -1790,6 +1799,13 @@
                     statusEl.innerText = `Faltan ${target - words} palabras`;
                     statusEl.style.color = "var(--incorrect-color)";
                 }
+            }
+        }
+
+        // Navegación entre las tareas de Writing
+        function changeWritingTask(direction) {
+            if (currentWritingIndex + direction >= 0 && currentWritingIndex + direction < ieltsWritingData.length) {
+                loadWritingTask(currentWritingIndex + direction);
             }
         }
 
