@@ -1838,43 +1838,43 @@
                 return;
             }
 
-            // Mensaje de carga interactivo
-            panel.innerHTML = `<h4 style="text-align:center; margin-top:6rem; color: var(--secondary-color); font-weight: normal;">El examinador virtual de Gemini está analizando tu redacción bajo los criterios oficiales... Por favor, espera unos segundos.</h4>`;
+            panel.innerHTML = `<h4 style="text-align:center; margin-top:6rem; color: var(--secondary-color); font-weight: normal;">Conectando con el servidor de Gemini... Por favor espera.</h4>`;
 
-            // Instrucción estricta para la evaluación (Prompt)
             const systemPrompt = `Actúas como un examinador oficial experto de IELTS Certificado. Evalúa el siguiente ensayo escrito en base a este enunciado exacto: "${task.prompt}".
             El ensayo del alumno es: "${essay}".
-            
-            Entrega tu respuesta estructurada en HTML limpio (usa etiquetas <p>, <ul>, <li>, <strong>, y tablas si es necesario). Debes incluir de forma estricta:
-            1. Overall Band Score (Escala 1.0 a 9.0).
-            2. Puntuación desglosada y retroalimentación breve por cada uno de los 4 criterios oficiales de IELTS (Task Achievement, Coherence and Cohesion, Lexical Resource, Grammatical Range and Accuracy).
-            3. Una sección llamada "Correcciones sugeridas" en formato de lista mostrando el texto original y cómo mejorarlo.
-            Responde en español, pero mantén los términos de los criterios y las correcciones en inglés. Importante: No envuelvas tu respuesta en bloques de código markdown.`;
+            Entrega tu respuesta estructurada en HTML limpio (usa etiquetas <p>, <ul>, <li>, <strong>). Debes incluir: 1. Overall Band Score. 2. Puntuación desglosada y retroalimentación breve por cada uno de los 4 criterios oficiales. 3. Correcciones sugeridas. Responde en español, sin bloques markdown.`;
 
             try {
-                // ¡Aquí está la magia! Tu página web ahora llama a tu puente secreto en Netlify
                 const response = await fetch("/.netlify/functions/analyze", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ promptText: systemPrompt })
                 });
 
-                const data = await response.json();
+                // Leemos la respuesta cruda para atrapar el error exacto
+                const textResponse = await response.text(); 
                 
-                // Procesamos la respuesta limpia de Google Gemini
+                if (!response.ok) {
+                    throw new Error(`Error de Netlify (HTTP ${response.status}): ${textResponse}`);
+                }
+
+                const data = JSON.parse(textResponse);
+                
+                if (data.error) throw new Error(`Error de la API: ${data.error}`);
+                
                 if (data.candidates && data.candidates[0].content.parts[0].text) {
                     let resultText = data.candidates[0].content.parts[0].text;
-                    // Limpieza extra por si la IA devuelve formato Markdown
                     resultText = resultText.replace(/```html/g, "").replace(/```/g, "");
                     panel.innerHTML = `<div style="line-height:1.6; font-size:0.95rem;">${resultText}</div>`;
                 } else {
-                    throw new Error("Respuesta inválida del servidor.");
+                    throw new Error("Respuesta incompleta: " + textResponse.substring(0, 100));
                 }
             } catch (error) {
                 panel.innerHTML = `
-                    <div style="color: var(--incorrect-color); padding: 1rem; text-align:center; border: 1px dashed var(--incorrect-color); font-size: 0.95rem;">
-                        <strong>Error de comunicación con el evaluador.</strong><br><br>
-                        Revisa tu conexión a internet o intenta enviar el ensayo nuevamente. Usa el botón <strong>"Compare with Model"</strong> para ver una respuesta Banda 9.0 oficial.
+                    <div style="color: var(--incorrect-color); padding: 1.5rem; text-align:left; border: 1px dashed var(--incorrect-color); font-size: 0.95rem; background: #fff3f3;">
+                        <strong style="font-size:1.1rem;">Diagnóstico del Servidor:</strong><br><br>
+                        <code>${error.message}</code><br><br>
+                        <span style="color:#555;">Copia el texto rojo que aparece arriba y envíaselo a Gemini.</span>
                     </div>`;
             }
         }
