@@ -1809,7 +1809,6 @@
             }
         }
 
-        // Conector asíncrono con el modelo gratuito Hugging Face
         async function analyzeWithFreeAI() {
             const panel = document.getElementById('writing-feedback-panel');
             const textarea = document.getElementById('writing-textarea');
@@ -1824,49 +1823,43 @@
                 return;
             }
 
-            panel.innerHTML = `<h4 style="text-align:center; margin-top:6rem; color: var(--secondary-color); font-weight: normal;">El examinador virtual está analizando tu redacción bajo los criterios oficiales... Por favor, espera.</h4>`;
+            // Mensaje de carga interactivo
+            panel.innerHTML = `<h4 style="text-align:center; margin-top:6rem; color: var(--secondary-color); font-weight: normal;">El examinador virtual de Gemini está analizando tu redacción bajo los criterios oficiales... Por favor, espera unos segundos.</h4>`;
 
-            // Prompt enriquecido basado en las instrucciones de evaluación del IELTS
-            const systemPrompt = `[IELTS EXAMINER MODE]
-            Evaluate the student's essay based strictly on official IELTS assessment criteria.
+            // Instrucción estricta para la evaluación (Prompt)
+            const systemPrompt = `Actúas como un examinador oficial experto de IELTS Certificado. Evalúa el siguiente ensayo escrito en base a este enunciado exacto: "${task.prompt}".
+            El ensayo del alumno es: "${essay}".
             
-            TASK PROMPT: "${task.prompt}"
-            STUDENT RESPONSE: "${essay}"
-            
-            CRITERIA FOR EVALUATION:
-            1. Task Achievement / Response: Check if all bullet points are fully answered and length requirements met.
-            2. Coherence and Cohesion: Assess paragraphing, logical sequencing, and correct use of cohesive devices.
-            3. Lexical Resource: Evaluate vocabulary variety, sophistication, and presence of spelling or word-choice errors.
-            4. Grammatical Range and Accuracy: Check sentence structures (simple vs complex) and grammatical control.
-            
-            OUTPUT FORMAT (Return valid clean HTML structure using <p>, <strong>, <ul>, <li>, and <table> tags):
-            - Overall Band Score (Scale 1.0 to 9.0)
-            - Detailed breakdown per criterion with scores.
-            - "Correcciones sugeridas" section showcasing a table or list with original text vs improved version.
-            
-            Respond entirely in Spanish language, but keep official criteria names in English. Do not wrap response in markdown code blocks.`;
+            Entrega tu respuesta estructurada en HTML limpio (usa etiquetas <p>, <ul>, <li>, <strong>, y tablas si es necesario). Debes incluir de forma estricta:
+            1. Overall Band Score (Escala 1.0 a 9.0).
+            2. Puntuación desglosada y retroalimentación breve por cada uno de los 4 criterios oficiales de IELTS (Task Achievement, Coherence and Cohesion, Lexical Resource, Grammatical Range and Accuracy).
+            3. Una sección llamada "Correcciones sugeridas" en formato de lista mostrando el texto original y cómo mejorarlo.
+            Responde en español, pero mantén los términos de los criterios y las correcciones en inglés. Importante: No envuelvas tu respuesta en bloques de código markdown.`;
 
             try {
-                const response = await fetch("https://api-inference.huggingface.co/models/MistralAI/Mistral-7B-Instruct-v0.2", {
+                // ¡Aquí está la magia! Tu página web ahora llama a tu puente secreto en Netlify
+                const response = await fetch("/.netlify/functions/analyze", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ inputs: systemPrompt })
+                    body: JSON.stringify({ promptText: systemPrompt })
                 });
 
                 const data = await response.json();
                 
-                if (data && data[0] && data[0].generated_text) {
-                    let resultText = data[0].generated_text;
-                    resultText = resultText.replace(systemPrompt, "").trim();
-                    panel.innerHTML = `<div style="line-height:1.6; font-size:0.95rem; white-space: pre-line;">${resultText}</div>`;
+                // Procesamos la respuesta limpia de Google Gemini
+                if (data.candidates && data.candidates[0].content.parts[0].text) {
+                    let resultText = data.candidates[0].content.parts[0].text;
+                    // Limpieza extra por si la IA devuelve formato Markdown
+                    resultText = resultText.replace(/```html/g, "").replace(/```/g, "");
+                    panel.innerHTML = `<div style="line-height:1.6; font-size:0.95rem;">${resultText}</div>`;
                 } else {
-                    throw new Error("Server busy");
+                    throw new Error("Respuesta inválida del servidor.");
                 }
             } catch (error) {
                 panel.innerHTML = `
                     <div style="color: var(--incorrect-color); padding: 1rem; text-align:center; border: 1px dashed var(--incorrect-color); font-size: 0.95rem;">
-                        <strong>El servidor de IA gratuito está saturado temporalmente o sin conexión.</strong><br><br>
-                        Usa el botón <strong>"Compare with Model"</strong> para realizar una autoevaluación inmediata con la plantilla Banda 9.0 oficial o vuelve a intentarlo en unos instantes.
+                        <strong>Error de comunicación con el evaluador.</strong><br><br>
+                        Revisa tu conexión a internet o intenta enviar el ensayo nuevamente. Usa el botón <strong>"Compare with Model"</strong> para ver una respuesta Banda 9.0 oficial.
                     </div>`;
             }
         }
