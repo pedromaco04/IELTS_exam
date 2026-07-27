@@ -322,9 +322,23 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        /* Clase para bloquear el examen antes de iniciar o al terminar */
+         .locked-content {
+             opacity: 0.3;
+             filter: blur(4px);
+             pointer-events: none;
+             user-select: none;
+             transition: all 0.3s ease;
+         }
     </style>
 </head>
 <body>
+
+    <!-- RELOJ TEMPORIZADOR FLOTANTE -->
+    <div id="exam-timer" style="display: none; position: fixed; top: 20px; right: 20px; background: #198754; color: white; padding: 0.5rem 1.5rem; border-radius: 50px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 1000; font-size: 1.2rem; letter-spacing: 2px;">
+    ⏱ <span id="timer-text">00:00</span>
+    </div>
 
     <!-- Main Navigation -->
     <nav class="top-nav">
@@ -342,6 +356,12 @@
 
     <!-- Main App Container -->
     <div class="container" id="app-container">
+        <!-- RELOJ Y BOTÓN DE INICIO -->
+         <div id="timer-header" style="text-align: center; margin-bottom: 2rem; padding: 1.5rem; background: #fff; border: 2px dashed var(--primary-color); border-radius: var(--border-radius); box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+             <h3 id="timer-display" style="font-size: 3rem; color: var(--text-color); margin-bottom: 0.5rem; font-family: monospace; letter-spacing: 2px;">00:00</h3>
+             <button id="btn-start-timer" class="btn btn-check" onclick="startExam()">INICIAR EXAMEN</button>
+             <p id="timer-warning" style="color: var(--incorrect-color); font-weight: bold; margin-top: 1rem; display: none; font-size: 1.2rem;">¡El tiempo se ha agotado!</p>
+         </div>
         
         <!-- Dynamic Content Area for Listening & Reading -->
         <div id="content-area" class="active">
@@ -396,9 +416,10 @@
              <!-- Contenedor donde se inyectarán los botones numerados -->
              <div id="global-task-buttons" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;"></div>
              
-             <!-- Botón de revisar centrado -->
-             <div style="text-align: center;">
-                 <button class="btn btn-check" onclick="checkAnswers()">Check Answers</button>
+             <!-- Botones de Acción -->
+             <div id="action-buttons-area" style="text-align: center; display: flex; justify-content: center; gap: 1rem;">
+                 <button id="btn-save-next" class="btn btn-nav" onclick="saveAndNext()">Guardar y Siguiente Part</button>
+                 <button id="btn-finish-exam" class="btn btn-check" onclick="finishExam()">Finalizar Examen y Revisar</button>
              </div>
          </div>
     </div>
@@ -1440,11 +1461,13 @@
         
 
         /* =========================================
-           2. ESTADO DE LA APLICACIÓN
-           ========================================= */
-        let currentSection = 'listening';
-        let currentMode = 'practice';
-        let currentIndex = 0;
+         2. ESTADO DE LA APLICACIÓN
+         ========================================= */
+         let currentSection = 'listening';
+         let currentMode = 'practice';
+         let currentIndex = 0;
+         let userAnswers = {}; // Memoria para guardar respuestas mientras navega
+         let examFinished = false; // Bloquea la edición cuando termina el examen
 
         /* =========================================
            3. NAVEGACIÓN Y MENÚS (SPA)
@@ -1482,6 +1505,7 @@
                 actions.style.display = 'flex';
                 setMode('practice'); // Por defecto al cambiar de sección
             }
+            resetTimerUI();
         }
 
         function setMode(mode) {
@@ -1493,6 +1517,7 @@
             document.getElementById(`tab-${mode}`).classList.add('active');
 
             renderTask();
+            resetTimerUI();
         }
 
         function changeTask(direction) {
@@ -1503,6 +1528,63 @@
             }
         }
 
+        // Guarda las respuestas de la pantalla actual en la memoria
+         function saveCurrentAnswers() {
+             if(examFinished) return; // Si ya acabó, no guardamos cambios
+             
+             if(currentSection === 'writing') {
+                 const textarea = document.getElementById('writing-textarea');
+                 if(textarea) userAnswers[`writing_${currentMode}_${currentWritingIndex}`] = textarea.value;
+                 return;
+             }
+        
+             const task = ieltsData[currentSection][currentMode][currentIndex];
+             if(!task || !task.questions) return;
+        
+             task.questions.forEach(q => {
+                 if(q.type === 'radio') {
+                     const selected = document.querySelector(`input[name="${q.id}"]:checked`);
+                     if(selected) userAnswers[q.id] = selected.value;
+                 } else if (q.type === 'checkbox') {
+                     const selectedBoxes = Array.from(document.querySelectorAll(`input[name="${q.id}"]:checked`)).map(cb => cb.value);
+                     userAnswers[q.id] = selectedBoxes;
+                 } else if (q.type === 'text' || q.type === 'select') {
+                     const inputEl = document.getElementById(q.id);
+                     if(inputEl) userAnswers[q.id] = inputEl.value;
+                 }
+             });
+         }
+        
+         // Restaura las respuestas desde la memoria a la pantalla
+         function restoreAnswers() {
+             if(currentSection === 'writing') {
+                 const textarea = document.getElementById('writing-textarea');
+                 const saved = userAnswers[`writing_${currentMode}_${currentWritingIndex}`];
+                 if(textarea && saved) textarea.value = saved;
+                 return;
+             }
+        
+             const task = ieltsData[currentSection][currentMode][currentIndex];
+             if(!task || !task.questions) return;
+        
+             task.questions.forEach(q => {
+                 const savedVal = userAnswers[q.id];
+                 if(savedVal === undefined) return; // Si no hay nada guardado, ignora
+        
+                 if(q.type === 'radio') {
+                     const radio = document.querySelector(`input[name="${q.id}"][value="${savedVal}"]`);
+                     if(radio) radio.checked = true;
+                 } else if (q.type === 'checkbox') {
+                     savedVal.forEach(val => {
+                         const cb = document.querySelector(`input[name="${q.id}"][value="${val}"]`);
+                         if(cb) cb.checked = true;
+                     });
+                 } else if (q.type === 'text' || q.type === 'select') {
+                     const inputEl = document.getElementById(q.id);
+                     if(inputEl) inputEl.value = savedVal;
+                 }
+             });
+         }
         /* =========================================
            4. RENDERIZADO DINÁMICO (DIBUJAR INTERFAZ)
            ========================================= */
@@ -1584,6 +1666,9 @@
             document.getElementById('btn-next').disabled = (currentIndex === taskList.length - 1);
 
             renderMainNavigation();
+            restoreAnswers();
+
+            if(examFinished) applyVisualFeedback();
         }
 
         // Dibuja la botonera interactiva para Listening y Reading
@@ -1610,76 +1695,223 @@
                  btn.innerText = `Part ${index + 1}`; 
                  
                  btn.onclick = () => {
-                     currentIndex = index;
-                     renderTask(); // Recarga la tarea elegida
-                 };
+                    saveCurrentAnswers(); // Guarda antes de saltar
+                    currentIndex = index;
+                    renderTask(); 
+                };
                  
                  navContainer.appendChild(btn);
              });
          }
+
+        /* =========================================
+         SISTEMA DE TEMPORIZADOR Y BLOQUEO
+         ========================================= */
+         let examCountdown;
+         let secondsLeft = 0;
+         let isExamRunning = false;
+        
+         // Define los tiempos oficiales del IELTS en segundos
+         function getSectionTime() {
+             if (currentSection === 'writing') {
+                 const task = ieltsWritingData[currentWritingIndex];
+                 return task.title.includes("Task 1") ? 20 * 60 : 40 * 60; // 20 min T1, 40 min T2
+             } else if (currentSection === 'reading') {
+                 return 20 * 60; // 20 min por pasaje de lectura
+             } else {
+                 return 10 * 60; // 10 min por sección de listening (ajustado para la web)
+             }
+         }
+        
+         // Reinicia la interfaz cada vez que se cambia de ejercicio
+         function resetTimerUI() {
+             clearInterval(examCountdown);
+             isExamRunning = false;
+             
+             document.getElementById('timer-warning').style.display = 'none';
+             document.getElementById('btn-start-timer').style.display = 'inline-block';
+             
+             secondsLeft = getSectionTime();
+             updateTimerDisplay();
+        
+             // Congelar el contenido principal
+             const contentArea = document.getElementById('content-area');
+             const writingArea = document.getElementById('writing-area');
+             if(contentArea) contentArea.classList.add('locked-content');
+             if(writingArea) writingArea.classList.add('locked-content');
+             
+             // Bloquear botones de revisión para que no hagan trampa
+             const checkBtns = document.querySelectorAll('.btn-check:not(#btn-start-timer)');
+             checkBtns.forEach(btn => btn.disabled = true);
+         }
+        
+         // Actualiza el texto del reloj
+         function updateTimerDisplay() {
+             const display = document.getElementById('timer-display');
+             if(!display) return;
+             
+             const m = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
+             const s = (secondsLeft % 60).toString().padStart(2, '0');
+             display.innerText = `${m}:${s}`;
+             
+             // Si quedan menos de 3 minutos, se pone rojo para dar estrés
+             if (secondsLeft <= 180 && secondsLeft > 0) { 
+                 display.style.color = "var(--incorrect-color)";
+             } else {
+                 display.style.color = "var(--text-color)";
+             }
+         }
+        
+         // Función que se activa al darle al botón INICIAR EXAMEN
+         function startExam() {
+             isExamRunning = true;
+             document.getElementById('btn-start-timer').style.display = 'none';
+             
+             // Descongelar el contenido
+             const contentArea = document.getElementById('content-area');
+             const writingArea = document.getElementById('writing-area');
+             if(contentArea) contentArea.classList.remove('locked-content');
+             if(writingArea) writingArea.classList.remove('locked-content');
+             
+             // Habilitar los botones de revisión
+             const checkBtns = document.querySelectorAll('.btn-check:not(#btn-start-timer)');
+             checkBtns.forEach(btn => btn.disabled = false);
+        
+             // Arrancar la cuenta regresiva
+             examCountdown = setInterval(() => {
+                 secondsLeft--;
+                 updateTimerDisplay();
+        
+                 if (secondsLeft <= 0) {
+                     clearInterval(examCountdown);
+                     document.getElementById('timer-warning').style.display = 'block';
+                     
+                     // Volver a bloquear cuando se acaba el tiempo (Simula que el examinador quita la hoja)
+                     if(contentArea) contentArea.classList.add('locked-content');
+                     if(writingArea) writingArea.classList.add('locked-content');
+                 }
+             }, 1000);
+         }
         /* =========================================
            5. ALGORITMO DEL EXAMINADOR (VALIDACIÓN)
            ========================================= */
-        function checkAnswers() {
-            const task = ieltsData[currentSection][currentMode][currentIndex];
-            if(!task || !task.questions) return;
-
-            task.questions.forEach(q => {
-                let elementBlock = document.getElementById(`block-${q.id}`);
-                // Si está embebido en una tabla, el bloque padre a colorear será el mismo input
-                if(q.embedded) elementBlock = document.getElementById(q.id); 
-                
-                if(!elementBlock) return;
-                elementBlock.classList.remove('correct-bg', 'incorrect-bg');
-
-                if (q.type === 'radio') {
-                    const selected = document.querySelector(`input[name="${q.id}"]:checked`);
-                    
-                    // Limpiar clases previas
-                    document.querySelectorAll(`input[name="${q.id}"]`).forEach(el => {
-                        el.closest('label').classList.remove('correct-bg', 'incorrect-bg');
-                    });
-
-                    if (selected) {
-                        const label = selected.closest('label');
-                        if (parseInt(selected.value) === q.answer) {
-                            label.classList.add('correct-bg');
-                        } else {
-                            label.classList.add('incorrect-bg');
-                        }
-                    } else {
-                        elementBlock.classList.add('incorrect-bg');
-                    }
-                } 
-                else if (q.type === 'checkbox') {
-                    const selectedBoxes = Array.from(document.querySelectorAll(`input[name="${q.id}"]:checked`)).map(cb => parseInt(cb.value));
-                    const isCorrect = JSON.stringify(selectedBoxes.sort()) === JSON.stringify(q.answers.sort());
-                    
-                    if (selectedBoxes.length > 0) {
-                        elementBlock.classList.add(isCorrect ? 'correct-bg' : 'incorrect-bg');
-                    } else {
-                        elementBlock.classList.add('incorrect-bg');
-                    }
-                } 
-                else if (q.type === 'text' || q.type === 'select') {
-                    const inputEl = document.getElementById(q.id);
-                    if(inputEl) {
-                        const inputVal = inputEl.value.trim().toLowerCase();
-                        
-                        // Soporta múltiples respuestas correctas (ej. "scientist" o "scientists")
-                        let isCorrect = false;
-                        if (Array.isArray(q.answer)) {
-                            isCorrect = q.answer.some(ans => ans.toLowerCase() === inputVal);
-                        } else {
-                            isCorrect = (inputVal === q.answer.toLowerCase());
-                        }
-
-                        inputEl.classList.remove('correct-bg', 'incorrect-bg');
-                        inputEl.classList.add(isCorrect ? 'correct-bg' : 'incorrect-bg');
-                    }
-                }
-            });
-        }
+        function saveAndNext() {
+             saveCurrentAnswers();
+             const taskList = ieltsData[currentSection][currentMode];
+             if (currentIndex < taskList.length - 1) {
+                 currentIndex++;
+                 renderTask();
+             }
+         }
+        
+         function finishExam() {
+             saveCurrentAnswers(); // Guarda la última hoja
+             clearInterval(examCountdown); // Detiene el reloj
+             examFinished = true;
+             
+             let totalQuestions = 0;
+             let correctAnswers = 0;
+        
+             // Evalúa todas las preguntas usando la memoria (userAnswers)
+             const taskList = ieltsData[currentSection][currentMode];
+             taskList.forEach(task => {
+                 if(!task.questions) return;
+                 task.questions.forEach(q => {
+                     totalQuestions++;
+                     const userVal = userAnswers[q.id];
+                     let isCorrect = false;
+        
+                     if (q.type === 'radio') {
+                         isCorrect = (userVal !== undefined && parseInt(userVal) === q.answer);
+                     } else if (q.type === 'checkbox') {
+                         if(userVal && Array.isArray(userVal)) {
+                              const selectedBoxes = userVal.map(v => parseInt(v));
+                              isCorrect = JSON.stringify(selectedBoxes.sort()) === JSON.stringify(q.answers.sort());
+                         }
+                     } else if (q.type === 'text' || q.type === 'select') {
+                         if(userVal !== undefined) {
+                             const inputStr = userVal.trim().toLowerCase();
+                             if (Array.isArray(q.answer)) {
+                                 isCorrect = q.answer.some(ans => ans.toLowerCase() === inputStr);
+                             } else {
+                                 isCorrect = (inputStr === q.answer.toLowerCase());
+                             }
+                         }
+                     }
+                     if(isCorrect) correctAnswers++;
+                 });
+             });
+        
+             // Dibuja el panel de resultados
+             const contentArea = document.getElementById('content-area');
+             const scorePanel = document.createElement('div');
+             scorePanel.style.cssText = "background: #d1e7dd; padding: 2rem; text-align: center; border-radius: 8px; margin-bottom: 2rem; border: 2px solid #198754;";
+             
+             // Cálculo estimado de banda (Aproximación simple para IELTS)
+             const percentage = correctAnswers / totalQuestions;
+             let band = 0;
+             if(percentage >= 0.9) band = "8.0 - 9.0";
+             else if(percentage >= 0.75) band = "7.0 - 7.5";
+             else if(percentage >= 0.6) band = "6.0 - 6.5";
+             else if(percentage >= 0.4) band = "5.0 - 5.5";
+             else band = "Debajo de 5.0";
+        
+             scorePanel.innerHTML = `
+                 <h2 style="color: #0f5132; margin-bottom: 10px;">¡Examen Finalizado!</h2>
+                 <h3 style="font-size: 1.8rem; color: #146c43;">Puntuación: ${correctAnswers} / ${totalQuestions}</h3>
+                 <h4 style="color: #198754; margin-top: 10px;">Banda Estimada: ${band}</h4>
+                 <p style="margin-top: 10px;">Navega por las partes usando los botones de arriba para ver tus errores y aciertos.</p>`;
+             
+             contentArea.insertBefore(scorePanel, contentArea.firstChild);
+             
+             // Congela la pantalla de nuevo (como si quitaran el papel)
+             contentArea.classList.add('locked-content');
+             document.getElementById('action-buttons-area').style.display = 'none';
+        
+             applyVisualFeedback(); // Pinta las respuestas actuales
+         }
+        
+         // Pinta de verde y rojo la pantalla actual leyendo la memoria
+         function applyVisualFeedback() {
+             const task = ieltsData[currentSection][currentMode][currentIndex];
+             if(!task || !task.questions) return;
+        
+             task.questions.forEach(q => {
+                 let elementBlock = document.getElementById(`block-${q.id}`);
+                 if(q.embedded) elementBlock = document.getElementById(q.id); 
+                 if(!elementBlock) return;
+                 
+                 elementBlock.classList.remove('correct-bg', 'incorrect-bg');
+                 const userVal = userAnswers[q.id];
+        
+                 if (q.type === 'radio') {
+                     // Limpia inputs y deshabilita
+                     document.querySelectorAll(`input[name="${q.id}"]`).forEach(el => {
+                         el.disabled = true;
+                         el.closest('label').classList.remove('correct-bg', 'incorrect-bg');
+                     });
+                     if (userVal !== undefined) {
+                         const selectedEl = document.querySelector(`input[name="${q.id}"][value="${userVal}"]`);
+                         const label = selectedEl.closest('label');
+                         if (parseInt(userVal) === q.answer) label.classList.add('correct-bg');
+                         else label.classList.add('incorrect-bg');
+                     } else elementBlock.classList.add('incorrect-bg'); // Dejó en blanco
+                 } 
+                 // Aplicar lógica similar para Checkbox y Text (bloquear input y pintar block)
+                 else if (q.type === 'text' || q.type === 'select') {
+                     const inputEl = document.getElementById(q.id);
+                     if(inputEl) {
+                         inputEl.disabled = true;
+                         const inputStr = (userVal || "").trim().toLowerCase();
+                         let isCorrect = false;
+                         if (Array.isArray(q.answer)) isCorrect = q.answer.some(ans => ans.toLowerCase() === inputStr);
+                         else isCorrect = (inputStr === q.answer.toLowerCase());
+                         
+                         inputEl.classList.add(isCorrect ? 'correct-bg' : 'incorrect-bg');
+                     }
+                 }
+             });
+         }
         
         // Inicializar la interfaz visualmente
         setSection('listening', document.querySelector('.nav-btn.active'));
@@ -1810,9 +2042,11 @@
             if (feedbackEl) {
                 feedbackEl.innerHTML = `<h4 style="color: var(--text-light); text-align: center; margin-top: 6rem; font-weight: normal;">Tu evaluación por criterios y el ensayo modelo Banda 9.0 aparecerán en este panel.</h4>`;
             }
-            
+
+            restoreAnswers();
             updateWordCount();
             renderWritingNavigation();
+            resetTimerUI();
         }
 
         // Contador de palabras dinámico y validación de objetivos
