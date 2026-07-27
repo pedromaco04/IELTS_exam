@@ -337,7 +337,7 @@
     <!-- Sub Navigation for Practice/Exercises -->
     <div class="sub-nav" id="sub-nav-container">
         <button id="tab-practice" class="sub-nav-btn active" onclick="setMode('practice')">Practice</button>
-        <button id="tab-Exercises" class="sub-nav-btn" onclick="setMode('Exercises')">Exercises</button>
+        <button id="tab-exercises" class="sub-nav-btn" onclick="setMode('exercises')">Exercises</button>
     </div>
 
     <!-- Main App Container -->
@@ -367,10 +367,7 @@
         
         <!-- BOTONES CORREGIDOS Y ALINEADOS -->
         <div style="margin-top: 1.5rem; display: flex; gap: 10px; flex-wrap: wrap; justify-content: space-between;">
-        <div>
-        <button class="btn btn-nav" style="padding: 0.6rem 1.2rem;" onclick="changeWritingTask(-1)">&#8592; Prev</button>
-        <button class="btn btn-nav" style="padding: 0.6rem 1.2rem;" onclick="changeWritingTask(1)">Next &#8594;</button>
-        </div>
+        <div id="writing-task-buttons" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
         <div style="display: flex; gap: 10px;">
         <button class="btn btn-check" style="padding: 0.6rem 1.5rem; font-size: 1rem;" onclick="checkWritingLocally()">Compare with Model</button>
         <button class="btn" style="background: #198754; color: white; padding: 0.6rem 1.5rem; font-size: 1rem;" onclick="analyzeWithFreeAI()">AI Evaluation</button>
@@ -606,7 +603,7 @@
                     }
 
                 ],
-                Exercises: [
+                exercises: [
                     {
                         title: "Test 1 - Section 1: Travel Information",
                         type: "audio",
@@ -1204,7 +1201,7 @@
                             ]
                         }
                     ],
-                    Exercises: [
+                    exercises: [
                     {
                         title: "Test 1 - Section 1: Emergency Procedures & Short Courses",
                         type: "reading",
@@ -1776,6 +1773,7 @@
             }
             
             updateWordCount();
+            renderWritingNavigation();
         }
 
         // Contador de palabras dinámico y validación de objetivos
@@ -1809,6 +1807,41 @@
                 loadWritingTask(currentWritingIndex + direction);
             }
         }
+
+        // Dibuja la botonera interactiva para Writing
+         function renderWritingNavigation() {
+            const navContainer = document.getElementById('writing-task-buttons');
+            if (!navContainer) return;
+            
+            navContainer.innerHTML = '';
+            
+            ieltsWritingData.forEach((task, index) => {
+                const btn = document.createElement('button');
+                
+                // Estilo dinámico: resalta el botón si es la tarea actual
+                if (index === currentWritingIndex) {
+                    btn.style.cssText = "padding: 0.5rem 1rem; background: var(--primary-color); color: white; border: none; border-radius: 4px; font-weight: bold; cursor: default;";
+                } else {
+                    btn.style.cssText = "padding: 0.5rem 1rem; background: #e9ecef; color: #333; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; transition: 0.2s;";
+                    btn.onmouseover = () => btn.style.background = "#d3d6d8";
+                    btn.onmouseout = () => btn.style.background = "#e9ecef";
+                }
+                
+                // Nombres cortos para los botones
+                let shortName = "Práctica";
+                if (task.title.includes("Test 1")) shortName = "T1";
+                if (task.title.includes("Test 2")) shortName = "T2";
+                
+                btn.innerText = task.title.includes("Task 1") ? `${shortName} - Task 1` : `${shortName} - Task 2`;
+                
+                // Al hacer clic, carga la tarea exacta
+                btn.onclick = () => {
+                    loadWritingTask(index);
+                };
+                
+                navContainer.appendChild(btn);
+            });
+         }
 
         // Despliega la respuesta modelo incrustada localmente
         function checkWritingLocally() {
