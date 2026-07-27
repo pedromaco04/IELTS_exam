@@ -366,13 +366,15 @@
         </div>
         
         <!-- BOTONES CORREGIDOS Y ALINEADOS -->
-        <div style="margin-top: 1.5rem; display: flex; gap: 10px; flex-wrap: wrap; justify-content: space-between;">
-        <div id="writing-task-buttons" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
-        <div style="display: flex; gap: 10px;">
-        <button class="btn btn-check" style="padding: 0.6rem 1.5rem; font-size: 1rem;" onclick="checkWritingLocally()">Compare with Model</button>
-        <button class="btn" style="background: #198754; color: white; padding: 0.6rem 1.5rem; font-size: 1rem;" onclick="analyzeWithFreeAI()">AI Evaluation</button>
-        </div>
-        </div>
+         <div style="margin-top: 1.5rem; display: flex; gap: 10px; flex-wrap: wrap; justify-content: space-between;">
+             <!-- Contenedor de la botonera dinámica -->
+             <div id="writing-task-buttons" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
+             
+             <div style="display: flex; gap: 10px;">
+                 <button class="btn btn-check" style="padding: 0.6rem 1.5rem; font-size: 1rem;" onclick="checkWritingLocally()">Compare with Model</button>
+                 <button class="btn" style="background: #198754; color: white; padding: 0.6rem 1.5rem; font-size: 1rem;" onclick="analyzeWithFreeAI()">AI Evaluation</button>
+             </div>
+         </div>
         </div>
 
         <!-- Columna Derecha: Panel de Resultados y Feedback -->
@@ -389,12 +391,16 @@
             <p>Esta sección está reservada para futuras actualizaciones. (Próximamente)</p>
         </div>
 
-        <!-- Navigation Actions -->
-        <div class="actions" id="actions-container">
-            <button class="btn btn-nav" id="btn-prev" onclick="changeTask(-1)">&#8592; Previous</button>
-            <button class="btn btn-check" onclick="checkAnswers()">Check Answers</button>
-            <button class="btn btn-nav" id="btn-next" onclick="changeTask(1)">Next &#8594;</button>
-        </div>
+        <!-- Navigation Actions (Listening & Reading) -->
+         <div class="actions" id="actions-container" style="flex-direction: column; align-items: stretch; gap: 1.5rem;">
+             <!-- Contenedor donde se inyectarán los botones numerados -->
+             <div id="global-task-buttons" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;"></div>
+             
+             <!-- Botón de revisar centrado -->
+             <div style="text-align: center;">
+                 <button class="btn btn-check" onclick="checkAnswers()">Check Answers</button>
+             </div>
+         </div>
     </div>
     
     <!-- ESPACIO PARA LA PARTE 2: MOTOR JAVASCRIPT -->
@@ -1576,8 +1582,41 @@
             // Actualizar estado de botones de navegación
             document.getElementById('btn-prev').disabled = (currentIndex === 0);
             document.getElementById('btn-next').disabled = (currentIndex === taskList.length - 1);
+
+            renderMainNavigation();
         }
 
+        // Dibuja la botonera interactiva para Listening y Reading
+         function renderMainNavigation() {
+             const navContainer = document.getElementById('global-task-buttons');
+             if (!navContainer) return;
+             navContainer.innerHTML = '';
+             
+             const taskList = ieltsData[currentSection][currentMode];
+             if (!taskList) return;
+        
+             taskList.forEach((task, index) => {
+                 const btn = document.createElement('button');
+                 
+                 if (index === currentIndex) {
+                     btn.style.cssText = "padding: 0.5rem 1rem; background: var(--primary-color); color: white; border: none; border-radius: 4px; font-weight: bold; cursor: default;";
+                 } else {
+                     btn.style.cssText = "padding: 0.5rem 1rem; background: #e9ecef; color: #333; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; transition: 0.2s;";
+                     btn.onmouseover = () => btn.style.background = "#d3d6d8";
+                     btn.onmouseout = () => btn.style.background = "#e9ecef";
+                 }
+                 
+                 // Nombre del botón basado en la sección y modo
+                 btn.innerText = `Part ${index + 1}`; 
+                 
+                 btn.onclick = () => {
+                     currentIndex = index;
+                     renderTask(); // Recarga la tarea elegida
+                 };
+                 
+                 navContainer.appendChild(btn);
+             });
+         }
         /* =========================================
            5. ALGORITMO DEL EXAMINADOR (VALIDACIÓN)
            ========================================= */
