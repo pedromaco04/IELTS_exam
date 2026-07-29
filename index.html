@@ -2193,7 +2193,7 @@
             Responde en español, pero mantén los términos de los criterios y las correcciones en inglés. Importante: No envuelvas tu respuesta en bloques de código markdown.`;
         
             try {
-                const response = await fetch("/.netlify/functions/analyze", {
+                const response = await fetch("/api/analyze", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ promptText: systemPrompt })
