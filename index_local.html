@@ -322,9 +322,23 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        /* Clase para bloquear el examen antes de iniciar o al terminar */
+         .locked-content {
+             opacity: 0.3;
+             filter: blur(4px);
+             pointer-events: none;
+             user-select: none;
+             transition: all 0.3s ease;
+         }
     </style>
 </head>
 <body>
+
+    <!-- RELOJ TEMPORIZADOR FLOTANTE -->
+    <div id="exam-timer" style="display: none; position: fixed; top: 20px; right: 20px; background: #198754; color: white; padding: 0.5rem 1.5rem; border-radius: 50px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 1000; font-size: 1.2rem; letter-spacing: 2px;">
+    ⏱ <span id="timer-text">00:00</span>
+    </div>
 
     <!-- Main Navigation -->
     <nav class="top-nav">
@@ -335,36 +349,86 @@
     </nav>
 
     <!-- Sub Navigation for Practice/Exercises -->
-    <div class="sub-nav" id="sub-nav-container">
+    <div class="sub-nav" id="sub-nav-container" style="margin-bottom: 0.5rem;">
         <button id="tab-practice" class="sub-nav-btn active" onclick="setMode('practice')">Practice</button>
         <button id="tab-exercises" class="sub-nav-btn" onclick="setMode('exercises')">Exercises</button>
     </div>
 
+    <!-- Menú de Tests (Solo visible en Exercises) -->
+    <div class="sub-nav" id="test-nav-container" style="display: none; background-color: transparent; padding-top: 0; margin-bottom: 2rem;">
+        <button id="btn-test-1" class="sub-nav-btn active" onclick="setTest('Test 1')">Test 1</button>
+        <button id="btn-test-2" class="sub-nav-btn" onclick="setTest('Test 2')">Test 2</button>
+    </div>
+
     <!-- Main App Container -->
     <div class="container" id="app-container">
+        <!-- RELOJ Y BOTÓN DE INICIO / FIN -->
+        <div id="timer-header" style="text-align: center; margin-bottom: 2rem; padding: 1.5rem; background: #fff; border: 2px dashed var(--primary-color); border-radius: var(--border-radius); box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <h3 id="timer-display" style="font-size: 3rem; color: var(--text-color); margin-bottom: 0.5rem; font-family: monospace; letter-spacing: 2px;">00:00</h3>
+            <div style="display: flex; justify-content: center; gap: 15px;">
+                <button id="btn-start-timer" class="btn btn-check" onclick="startExam()">INICIAR EXAMEN</button>
+                <button id="btn-finish-exam" class="btn" style="display: none; background: var(--incorrect-color); color: white;" onclick="finishExam()">FINALIZAR EXAMEN</button>
+            </div>
+            <p id="timer-warning" style="color: var(--incorrect-color); font-weight: bold; margin-top: 1rem; display: none; font-size: 1.2rem;">¡El tiempo se ha agotado!</p>
+        </div>
         
         <!-- Dynamic Content Area for Listening & Reading -->
         <div id="content-area" class="active">
             <!-- JavaScript will inject tasks here -->
         </div>
 
-        <!-- Static Placeholder for Writing -->
-        <div id="writing-area" class="static-section">
-            <h2 style="color: var(--primary-color); margin-bottom: 1rem;">Writing Section</h2>
-            <p>Esta sección está reservada para futuras actualizaciones. (Próximamente)</p>
+        <!-- Interactive Writing Section -->
+        <div id="writing-area" class="static-section" style="text-align: left; padding: 1rem 2rem;">
+        <h2 style="color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 0.5rem; margin-bottom: 1.5rem;">IELTS Writing Simulator</h2>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 1.5rem;">
+        <!-- Columna Izquierda: Tarea y Caja de Escritura -->
+        <div>
+        <div style="background: #fafafa; padding: 1rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); margin-bottom: 1rem;">
+        <h4 style="color: var(--primary-color);" id="writing-task-title">Task 1: Academic Report</h4>
+        <p id="writing-task-prompt" style="font-style: italic; margin-top: 0.5rem; font-size: 0.95rem; line-height: 1.5;"></p>
+        </div>
+        <textarea id="writing-textarea" placeholder="Comienza a escribir tu ensayo aquí..." style="width: 100%; height: 320px; padding: 1rem; border-radius: 4px; border: 1px solid var(--border-color); font-size: 1rem; font-family: inherit; resize: vertical;" oninput="updateWordCount()"></textarea>
+        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-weight: bold;">
+        <span>Words: <span id="writing-word-count">0</span></span>
+        <span id="writing-target-status" style="color: var(--incorrect-color);">Faltan palabras</span>
+        </div>
+        
+        <!-- BOTONES CORREGIDOS Y ALINEADOS -->
+         <div style="margin-top: 1.5rem; display: flex; gap: 10px; flex-wrap: wrap; justify-content: space-between;">
+             
+             <div style="display: flex; gap: 10px;">
+                 <button class="btn btn-check" style="padding: 0.6rem 1.5rem; font-size: 1rem;" onclick="checkWritingLocally()">Compare with Model</button>
+                 <button class="btn" style="background: #198754; color: white; padding: 0.6rem 1.5rem; font-size: 1rem;" onclick="analyzeWithFreeAI()">AI Evaluation</button>
+             </div>
+         </div>
         </div>
 
+        <!-- Columna Derecha: Panel de Resultados y Feedback -->
+        <div>
+        <div id="writing-feedback-panel" style="background: #fff; border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 1.5rem; height: 500px; overflow-y: auto;">
+        <h4 style="color: var(--text-light); text-align: center; margin-top: 6rem; font-weight: normal;">Tu evaluación por criterios y el ensayo modelo Banda 9.0 aparecerán en este panel.</h4>
+        </div>
+        </div>
+        </div>
+        </div>
         <!-- Static Placeholder for Speaking -->
         <div id="speaking-area" class="static-section">
             <h2 style="color: var(--primary-color); margin-bottom: 1rem;">Speaking Section</h2>
             <p>Esta sección está reservada para futuras actualizaciones. (Próximamente)</p>
         </div>
 
-        <!-- Navigation Actions -->
-        <div class="actions" id="actions-container">
-            <button class="btn btn-nav" id="btn-prev" onclick="changeTask(-1)">&#8592; Previous</button>
-            <button class="btn btn-check" onclick="checkAnswers()">Check Answers</button>
-            <button class="btn btn-nav" id="btn-next" onclick="changeTask(1)">Next &#8594;</button>
+        <!-- Navigation Actions (Listening & Reading) -->
+        <div class="actions" id="actions-container" style="flex-direction: column; align-items: stretch; gap: 1.5rem;">
+            <!-- Contenedor de botones numerados -->
+            <div id="global-task-buttons" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;"></div>
+            
+            <!-- Botones de Navegación Clásica -->
+            <div id="action-buttons-area" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <button id="btn-prev" class="btn btn-nav" onclick="changeTask(-1)">&#8592; Previous</button>
+                <button id="btn-save" class="btn" style="background: var(--secondary-color); color: white;" onclick="saveCurrentAnswers()">Guardar Respuestas</button>
+                <button id="btn-next" class="btn btn-nav" onclick="changeTask(1)">Next &#8594;</button>
+            </div>
         </div>
     </div>
     
@@ -374,7 +438,7 @@
         <!-- MOTOR JAVASCRIPT (PARTE 2) -->
     
         /* =========================================
-           1. BASE DE DATOS (LISTENING 1 - 5)
+           1. BASE DE DATOS (LISTENING & READING)
            ========================================= */
         const ieltsData = {
             listening: {
@@ -1076,7 +1140,8 @@
                                   <p>Further, employees can usually purchase accident insurance for their partners. However, submission and review of an application to the insurance company will determine whether the partner is eligible to participate. The terms in these policies bought for spouses are identical to those in the employees' policy. This is, of course, provided that he/she has no accident insurance under another plan.</p>
                                   <p>Accident benefits take effect after completing three months of employment. Full-time employees will then automatically receive the minimum $80,000 worth of protection. Part-time employees, defined as those scheduled to work less than forty hours per week, will also be offered accident protection, but the amount of this coverage depends on the hours they typically work.</p>
                                   <p>Additional insurance is optional and is sold in amounts of $25,000 and capped at $100,000. Anyone who is interested can submit a request to purchase it and will be responsible for the premium as well as the fees to administer it.</p>
-                                  <p>If employees take an extended time off work on leave, they can either decide not to carry accident insurance or they can decide to keep it and pay 100% of the expense. Basic insurance protection resumes on the first day of the return to work; however, the optional coverages that are discontinued during this time are not automatically restored. These coverages will resume after a medical, a letter from the doctor, and an assurance that the insurance carrier is satisfied.</p>`,
+                                  <p>If employees take an extended time off work on leave, they can either decide not to carry accident insurance or they can decide to keep it and pay 100% of the expense. Basic insurance protection resumes on the first day of the return to work; however, the optional coverages that are discontinued during this time are not automatically restored. These coverages will resume after a medical, a letter from the doctor, and an assurance that the insurance carrier is satisfied.</p>
+                                  <br><p><em>Complete the sentences below. Choose <strong>NO MORE THAN ONE WORD</strong> from the text for each answer.</em></p>`,
                         questions: [
                             { id: "r3_q1", text: "1. The accident protection at City Media is ____________ amongst similar companies.", type: "text", answer: "unique" },
                             { id: "r3_q2", text: "2. The insurance programme excludes ____________ employees.", type: "text", answer: "temporary" },
@@ -1093,7 +1158,8 @@
                                   <p>The internship winners will work at one of our two speciality TV stations. The Connect station provides programming on regional events, while the emphasis at Transview is on instructional shows. Each intern will work in an entry-level position within an area that meets the requirements of the company and be paid at the opening rate set by the company for that position. If the assignment makes relocation necessary, a maximum $1,500 grant is provided to assist with these expenses.</p>
                                   <p>Interested broadcasting applicants should provide evidence of full-time enrolment in the field of broadcasting at an accredited post-secondary institution. An official transcript from the educational institution is also required. Mature students may replace this transcript with a one-page typewritten statement of their goals. References from three teachers or employers will be necessary if the application proceeds.</p>
                                   <p>Once your application is accepted, you will receive a confirmation letter by mail from Personnel. The application is then referred to a Canada-wide panel of City Media employees. These individuals are familiar with the positions that would be considered a complementary fit with your stated career path. They will put together a shortlist of promising candidates and conduct an in-person or telephone interview. The type of interview will vary with the distance of each candidate. The hiring decisions of the panel are final.</p>
-                                  <p>If a candidate is not eligible, the application will be removed from the competition, as will those whose applications and accompanying documents are received later than the deadline for submission. No exceptions can be made for delayed, lost or misdirected mail.</p>`,
+                                  <p>If a candidate is not eligible, the application will be removed from the competition, as will those whose applications and accompanying documents are received later than the deadline for submission. No exceptions can be made for delayed, lost or misdirected mail.</p>
+                                  <br><p><em>Complete the sentences below. Choose <strong>NO MORE THAN ONE WORD</strong> from the text for each answer.</em></p>`,
                         questions: [
                             { id: "r4_q1", text: "1. Internships allow minorities to gain ____________ and show their talents.", type: "text", answer: "experience" },
                             { id: "r4_q2", text: "2. Internships further City Media's aim to reflect the ____________ of people in Canada.", type: "text", answer: "diversity" },
@@ -1117,7 +1183,7 @@
                                 { id: "r5_q2", text: "2. No investigation of certain structures has taken place.", type: "select", options: ["A. Tichitt-Oualata", "B. Jenné-Jeno", "C. Igbo-Ukwu"], answer: "A. Tichitt-Oualata" },
                                 { id: "r5_q3", text: "3. Habitation continued after the decline of the political unit.", type: "select", options: ["A. Tichitt-Oualata", "B. Jenné-Jeno", "C. Igbo-Ukwu"], answer: "B. Jenné-Jeno" },
                                 { id: "r5_q4", text: "4. Different residential areas had different characteristics.", type: "select", options: ["A. Tichitt-Oualata", "B. Jenné-Jeno", "C. Igbo-Ukwu"], answer: "A. Tichitt-Oualata" },
-                                { id: "r5_q5", text: "Complete the summary: The state of Ife adjoined the (5) ____________ in Nigeria.", type: "text", answer: "forest" },
+                                { id: "r5_q5", text: "<em>Complete the summary below. Write <strong>ONE WORD ONLY</strong>.</em><br><br>The state of Ife adjoined the (5) ____________ in Nigeria.", type: "text", answer: "forest" },
                                 { id: "r5_q6", text: "It traded a variety of goods, including metals such as (6) ____________.", type: "text", answer: "gold" },
                                 { id: "r5_q7", text: "Floors in religious buildings were made from bits of (7) ____________.", type: "text", answer: "pottery" },
                                 { id: "r5_q8", text: "There are many surviving examples of (8) ____________ made of brass or terracotta.", type: "text", answer: ["sculptures", "sculpture"] },
@@ -1399,28 +1465,78 @@
                 ]
             }
         };
-                
-        
 
         /* =========================================
-           2. ESTADO DE LA APLICACIÓN
+           BASE DE DATOS UNIFICADA DE WRITING
+           ========================================= */
+        const ieltsWritingData = {
+            practice: [
+                {
+                    title: "Practice - Task 1: College Accommodation",
+                    prompt: "You live in a room in college which you share with another student. However, there are many problems with this arrangement and you find it very difficult to work.<br><br>Write a letter to the accommodation officer at the college. In your letter:<br>• describe the situation<br>• explain your problems and why it is difficult to work<br>• say what kind of accommodation you would prefer<br><br>You do NOT need to write any addresses. Begin your letter as follows:<br>Dear Sir or Madam,",
+                    targetWords: 150,
+                    modelAnswer: `<p><strong>Band 9.0 Model Answer:</strong></p><p>Dear Sir or Madam,</p><p>I am writing to formally request a change in my current accommodation arrangements. I currently reside in Room 42B in the North Hall, which I share with another student.</p><p>While my roommate is a pleasant individual, our schedules and study habits are completely incompatible, making it extremely difficult for me to focus on my academic work. He frequently invites friends over late into the evening and plays loud music while I am trying to study or sleep. Despite my repeated requests for quiet study hours, the situation has not improved, and the constant noise and disruptions are now negatively affecting my academic performance and overall well-being.</p><p>Given my heavy coursework this semester, I desperately need a quiet environment. Therefore, I would be grateful if you could transfer me to a single room, preferably in a designated quiet block or postgraduate hall, where I can study without interruptions.</p><p>I hope you can accommodate my request as soon as possible.</p><p>Yours faithfully,<br>John Doe</p>`
+                },
+                {
+                    title: "Practice - Task 2: Paying for Elderly Care",
+                    prompt: "In Britain, when someone gets old they often go to live in a home with other old people where there are nurses to look after them. Sometimes the government has to pay for this care.<br><br>Who do you think should pay for this care, the government or the family?<br><br>Give reasons for your answer and include any relevant examples from your own knowledge or experience.",
+                    targetWords: 250,
+                    modelAnswer: `<p><strong>Band 9.0 Model Answer:</strong></p><p>In many developed nations, such as Britain, it is common for the elderly to reside in nursing homes where they receive professional care. A significant debate arises regarding who should bear the financial responsibility for this care: the government or the individual's family. In my opinion, the government should take the primary responsibility for funding elderly care, although families who are financially affluent should also be encouraged to contribute.</p><p>The principal reason the state should finance elderly care is that these individuals have paid taxes throughout their working lives. By contributing to the economy and society for decades, they have effectively invested in a social security net. It is a fundamental duty of a welfare state to ensure that its senior citizens live their final years with dignity, regardless of their family’s financial status. Denying them this care would be a betrayal of the social contract.</p><p>Furthermore, placing the financial burden entirely on families can lead to severe economic hardship. Nursing home fees are astronomically high, and average-income families may be forced into debt or have to sacrifice their children's educational funds to pay for their aging parents' care. This creates a cycle of financial instability. For instance, in countries without state-funded care, it is common to see middle-class families face bankruptcy due to unexpected medical and residential costs for elderly relatives.</p><p>However, it is reasonable to suggest a means-tested system. Families with substantial wealth could be required to co-pay a portion of the expenses, ensuring that state resources are allocated to those who are most vulnerable and genuinely cannot afford the fees.</p><p>In conclusion, while wealthy families could logically contribute to the costs, the government must be the primary provider of funding for elderly care homes. This ensures that all citizens, after a lifetime of contributing to society, are guaranteed professional care and a dignified retirement.</p>`
+                }
+            ],
+            exercises: [
+                {
+                    title: "Test 1 - Task 1: Letter to a Friend",
+                    prompt: "A friend has agreed to look after your house and pet while you are on holiday. Write a letter to your friend.<br><br>In your letter:<br>• give contact details for when you are away<br>• give instructions about how to care for your pet<br>• describe some other household duties<br><br>Begin your letter as follows:<br>Dear [Friend's name],",
+                    targetWords: 150,
+                    modelAnswer: `<p><strong>Band 9.0 Model Answer:</strong></p><p>Dear Sarah,</p><p>I hope you are doing well. I am writing to thank you once again for agreeing to look after my house and take care of Buster while I am away on holiday in Italy.</p><p>If you have any emergencies, you can reach me on my mobile phone at +44 7700 900451. I will have my phone on me at all times. Alternatively, you can email me, as I will be checking my inbox every evening.</p><p>Regarding Buster, he needs to be fed twice a day: once at 8:00 AM and again at 6:00 PM. His dry food is stored in the pantry, and you just need to give him one scoop per meal. Also, please make sure he always has fresh water. He loves a short walk in the evening, so if you have time to take him to the local park, he would be thrilled.</p><p>As for the house, there isn't much to do. However, I would really appreciate it if you could water the indoor plants in the living room every two days and collect the mail from the mailbox so it doesn't pile up.</p><p>Thanks again for your help. I will bring you a nice souvenir from Rome!</p><p>Warm wishes,<br>Emily</p>`
+                },
+                {
+                    title: "Test 1 - Task 2: Teaching Children at Home",
+                    prompt: "Some people think that teaching children at home is better for a child's development than sending them to school.<br><br>To what extent do you agree or disagree?",
+                    targetWords: 250,
+                    modelAnswer: `<p><strong>Band 9.0 Model Answer:</strong></p><p>The debate over the most effective educational environment for children has led some to argue that homeschooling is superior to traditional schooling for a child’s overall development. While educating children at home offers certain personalized academic benefits, I strongly disagree that it is the best approach, as traditional schools provide irreplaceable opportunities for social and emotional growth.</p><p>Admittedly, homeschooling allows for a highly customized educational experience. Parents can tailor the curriculum to match their child's specific learning pace, strengths, and interests. This one-on-one attention can lead to rapid academic progress, especially for gifted children or those with learning difficulties who might be left behind in a crowded classroom. Furthermore, it protects children from negative peer influences, such as bullying, which can severely impact their mental health.</p><p>However, the primary flaw in homeschooling is the lack of comprehensive social interaction. Schools are microcosms of society where children learn essential life skills that cannot be taught in a textbook. By interacting with a diverse group of peers and teachers, students develop emotional intelligence, teamwork, and conflict-resolution skills. They learn how to navigate social hierarchies and handle both failure and success in a public setting. A child isolated at home may struggle to integrate into university life or professional workspaces where collaboration is mandatory.</p><p>Moreover, traditional schools offer resources that are difficult to replicate at home. Fully equipped science laboratories, organized sports teams, and specialized art or music programs provide a well-rounded education that parents, regardless of their dedication, rarely have the expertise or financial means to supply on their own.</p><p>In conclusion, while homeschooling can offer academic advantages tailored to the individual, traditional schooling is far more beneficial for a child's holistic development. The interpersonal skills and diverse resources provided by schools are fundamental in preparing a child for the complexities of the adult world.</p>`
+                },
+                {
+                    title: "Test 2 - Task 1: Lost Item in a Hotel",
+                    prompt: "You stayed at a hotel on a recent business trip and left an important item in your room.<br><br>Write a letter to the hotel manager. In your letter:<br>• describe the item you left<br>• explain where you think you left it<br>• say what you would like the manager to do",
+                    targetWords: 150,
+                    modelAnswer: `<p><strong>Band 9.0 Model Answer:</strong></p><p>Dear Sir or Madam,</p><p>I am writing to report an item that I inadvertently left behind in my room following my stay at your hotel from October 12th to October 14th. I was accommodated in room 314.</p><p>The item is a silver, rectangular external hard drive made by the brand 'Seagate'. It is extremely important as it contains crucial, unbacked-up data and confidential documents related to my recent business presentations.</p><p>I am quite certain that I left it plugged into the power outlet located on the desk, right next to the bedside lamp. I was working on my laptop until late the night before my departure and simply forgot to pack it in my briefcase the following morning in my rush to catch my flight.</p><p>I would be highly grateful if you could ask your housekeeping staff to check the room. If the hard drive is found, please contact me immediately at 555-0198. I am more than willing to cover any courier charges required to post the item to my home address via expedited shipping.</p><p>Thank you for your prompt assistance in this matter.</p><p>Yours faithfully,<br>Michael Chang</p>`
+                },
+                {
+                    title: "Test 2 - Task 2: Equal Salary for All",
+                    prompt: "Some people believe that everyone should be paid the same salary, regardless of their occupation.<br><br>To what extent do you agree or disagree?",
+                    targetWords: 250,
+                    modelAnswer: `<p><strong>Band 9.0 Model Answer:</strong></p><p>The idea of implementing a universal, equal salary for all workers, irrespective of their profession, is a radical concept often proposed to eliminate income inequality. While the underlying intention of creating a fairer society is noble, I completely disagree with this approach, as it would destroy individual motivation and devastate the global economy.</p><p>The most significant argument against equal pay is that it fundamentally undermines the incentive to work hard and pursue higher education. Certain professions, such as neurosurgery, engineering, or law, require a decade or more of rigorous academic training, immense financial investment, and high levels of stress. If a surgeon were paid the exact same wage as a supermarket cashier, there would be no financial motivation for anyone to undertake the grueling preparation required for complex jobs. Consequently, society would face a severe shortage of highly skilled professionals, leading to a collapse in critical sectors like healthcare and technology.</p><p>Furthermore, compensation based on occupation reflects the level of responsibility and risk associated with a job. A corporate CEO or a commercial airline pilot holds the lives and livelihoods of hundreds of people in their hands on a daily basis. The higher salaries awarded to these positions act as a reflection of the heavy burden they carry and the value they generate. Paying everyone equally ignores the basic economic principles of supply and demand, as well as the intrinsic value of specialized skills.</p><p>Admittedly, the wage gap between the highest and lowest earners in modern society is often disproportionate, and essential workers like teachers and nurses are frequently underpaid. However, the solution is not to standardize all salaries, but rather to establish higher minimum wages and fairer taxation systems to ensure a decent standard of living for all.</p><p>In conclusion, paying every individual the same salary regardless of their occupation is an impractical and counterproductive idea. It would eradicate ambition, lead to a shortage of essential experts, and ultimately cripple societal progress. Fair compensation must remain tied to a person's skills, responsibilities, and contributions.</p>`
+                }
+            ]
+        };
+
+        /* =========================================
+           2. ESTADO GLOBAL DE LA APLICACIÓN
            ========================================= */
         let currentSection = 'listening';
         let currentMode = 'practice';
-        let currentIndex = 0;
+        let currentTest = 'Test 1'; 
+        let currentIndex = 0; // Índice unificado para todas las secciones
+        let userAnswers = {}; 
+        let examFinished = false; 
+
+        // Variables del Reloj
+        let examCountdown;
+        let secondsLeft = 0;
+        let isExamRunning = false;
 
         /* =========================================
-           3. NAVEGACIÓN Y MENÚS (SPA)
+           3. NAVEGACIÓN Y MENÚS INTEGRADOS
            ========================================= */
         function setSection(section, btn) {
             currentSection = section;
-            currentIndex = 0;
+            isExamRunning = false; 
 
-            // Actualizar botones del menú principal
             document.querySelectorAll('.top-nav .nav-btn').forEach(el => el.classList.remove('active'));
             if(btn) btn.classList.add('active');
 
-            // Manejar secciones estáticas vs dinámicas
             const contentArea = document.getElementById('content-area');
             const writingArea = document.getElementById('writing-area');
             const speakingArea = document.getElementById('speaking-area');
@@ -1431,110 +1547,249 @@
             writingArea.style.display = 'none';
             speakingArea.style.display = 'none';
 
-            if (section === 'writing') {
-                writingArea.style.display = 'block';
-                subNav.style.display = 'none';
-                actions.style.display = 'none';
-            } else if (section === 'speaking') {
+            if (section === 'speaking') {
                 speakingArea.style.display = 'block';
-                subNav.style.display = 'none';
-                actions.style.display = 'none';
+                if(subNav) subNav.style.display = 'none';
+                if(actions) actions.style.display = 'none';
+                document.getElementById('test-nav-container').style.display = 'none';
+                resetTimerUI();
             } else {
-                contentArea.classList.add('active');
-                subNav.style.display = 'flex';
-                actions.style.display = 'flex';
-                setMode('practice'); // Por defecto al cambiar de sección
+                if (section === 'writing') writingArea.style.display = 'block';
+                else contentArea.classList.add('active');
+                
+                // Writing, Reading y Listening usan ahora el mismo panel de navegación
+                if(subNav) subNav.style.display = 'flex';
+                if(actions) actions.style.display = 'flex';
+                setMode('practice');
             }
         }
 
         function setMode(mode) {
             currentMode = mode;
-            currentIndex = 0;
+            isExamRunning = false; 
 
-            // Actualizar botones del submenú
-            document.querySelectorAll('.sub-nav-btn').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('#sub-nav-container .sub-nav-btn').forEach(el => el.classList.remove('active'));
             document.getElementById(`tab-${mode}`).classList.add('active');
-
-            renderTask();
+            
+            const testNav = document.getElementById('test-nav-container');
+            if (mode === 'exercises') {
+                if(testNav) testNav.style.display = 'flex';
+                setTest('Test 1'); // Resetea al Test 1 por defecto
+            } else {
+                if(testNav) testNav.style.display = 'none';
+                currentIndex = 0;
+                refreshUI();
+            }
         }
 
-        function changeTask(direction) {
-            const taskList = ieltsData[currentSection][currentMode];
-            if (currentIndex + direction >= 0 && currentIndex + direction < taskList.length) {
-                currentIndex += direction;
-                renderTask();
-            }
+        function setTest(testName) {
+            currentTest = testName;
+            isExamRunning = false;
+            
+            document.getElementById('btn-test-1').classList.remove('active');
+            document.getElementById('btn-test-2').classList.remove('active');
+            if (testName === 'Test 1') document.getElementById('btn-test-1').classList.add('active');
+            if (testName === 'Test 2') document.getElementById('btn-test-2').classList.add('active');
+            
+            // Buscar la primera pregunta que pertenece a este test
+            const taskList = currentSection === 'writing' ? ieltsWritingData[currentMode] : ieltsData[currentSection][currentMode];
+            currentIndex = taskList.findIndex(t => t.title.includes(testName));
+            if(currentIndex === -1) currentIndex = 0; 
+            
+            refreshUI();
+        }
+
+        function refreshUI() {
+            if(currentSection === 'writing') loadWritingTask();
+            else renderTask();
+            resetTimerUI();
         }
 
         /* =========================================
-           4. RENDERIZADO DINÁMICO (DIBUJAR INTERFAZ)
+           4. LÓGICA DE LÍMITES Y GUARDADO
            ========================================= */
+        function getNavigationBoundaries() {
+            const taskList = currentSection === 'writing' ? ieltsWritingData[currentMode] : ieltsData[currentSection][currentMode];
+            if (!taskList || taskList.length === 0) return { min: 0, max: 0 };
+            
+            if (currentMode === 'practice') return { min: 0, max: taskList.length - 1 };
+            
+            const indices = [];
+            taskList.forEach((t, i) => { if(t.title.includes(currentTest)) indices.push(i); });
+            if (indices.length === 0) return { min: 0, max: 0 };
+            return { min: indices[0], max: indices[indices.length - 1] };
+        }
+
+        function getEvaluationBoundaries() {
+            if (currentMode === 'practice') {
+                return { min: currentIndex, max: currentIndex }; // Solo evaluar la práctica actual
+            }
+            return getNavigationBoundaries(); // Todo el test actual
+        }
+
+        function changeTask(direction) {
+            saveCurrentAnswers(); 
+            const bounds = getNavigationBoundaries();
+            let nextIndex = currentIndex + direction;
+            
+            if (nextIndex >= bounds.min && nextIndex <= bounds.max) {
+                if (currentMode === 'practice') {
+                    examFinished = false; 
+                    isExamRunning = false;
+                }
+                currentIndex = nextIndex;
+                if(currentSection === 'writing') loadWritingTask();
+                else renderTask();
+            }
+        }
+
+        function saveCurrentAnswers() {
+             if(examFinished) return; 
+             
+             if(currentSection === 'writing') {
+                 const textarea = document.getElementById('writing-textarea');
+                 if(textarea) userAnswers[`writing_${currentMode}_${currentIndex}`] = textarea.value;
+                 return;
+             }
+        
+             const task = ieltsData[currentSection][currentMode][currentIndex];
+             if(!task || !task.questions) return;
+        
+             task.questions.forEach(q => {
+                 if(q.type === 'radio') {
+                     const selected = document.querySelector(`input[name="${q.id}"]:checked`);
+                     if(selected) userAnswers[q.id] = selected.value;
+                 } else if (q.type === 'checkbox') {
+                     const selectedBoxes = Array.from(document.querySelectorAll(`input[name="${q.id}"]:checked`)).map(cb => cb.value);
+                     userAnswers[q.id] = selectedBoxes;
+                 } else if (q.type === 'text' || q.type === 'select') {
+                     const inputEl = document.getElementById(q.id);
+                     if(inputEl) userAnswers[q.id] = inputEl.value;
+                 }
+             });
+        }
+        
+        function restoreAnswers() {
+             if(currentSection === 'writing') {
+                 const textarea = document.getElementById('writing-textarea');
+                 const saved = userAnswers[`writing_${currentMode}_${currentIndex}`];
+                 if(textarea && saved !== undefined) textarea.value = saved;
+                 else if(textarea) textarea.value = ""; 
+                 return;
+             }
+        
+             const task = ieltsData[currentSection][currentMode][currentIndex];
+             if(!task || !task.questions) return;
+        
+             task.questions.forEach(q => {
+                 const savedVal = userAnswers[q.id];
+                 if(savedVal === undefined) return; 
+        
+                 if(q.type === 'radio') {
+                     const radio = document.querySelector(`input[name="${q.id}"][value="${savedVal}"]`);
+                     if(radio) radio.checked = true;
+                 } else if (q.type === 'checkbox') {
+                     savedVal.forEach(val => {
+                         const cb = document.querySelector(`input[name="${q.id}"][value="${val}"]`);
+                         if(cb) cb.checked = true;
+                     });
+                 } else if (q.type === 'text' || q.type === 'select') {
+                     const inputEl = document.getElementById(q.id);
+                     if(inputEl) inputEl.value = savedVal;
+                 }
+             });
+        }
+
+        /* =========================================
+           5. RENDERIZADO VISUAL UNIFICADO
+           ========================================= */
+        function renderMainNavigation() {
+             const navContainer = currentSection === 'writing' ? document.getElementById('writing-task-buttons') : document.getElementById('global-task-buttons');
+             if (!navContainer) return;
+             navContainer.innerHTML = '';
+             
+             const taskList = currentSection === 'writing' ? ieltsWritingData[currentMode] : ieltsData[currentSection][currentMode];
+             if (!taskList) return;
+        
+             const bounds = getNavigationBoundaries();
+
+             for(let i = bounds.min; i <= bounds.max; i++) {
+                 const btn = document.createElement('button');
+                 const task = taskList[i];
+                 
+                 if (i === currentIndex) {
+                     btn.style.cssText = "padding: 0.5rem 1rem; background: var(--primary-color); color: white; border: none; border-radius: 4px; font-weight: bold; cursor: default;";
+                 } else {
+                     btn.style.cssText = "padding: 0.5rem 1rem; background: #e9ecef; color: #333; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; transition: 0.2s;";
+                     btn.onmouseover = () => btn.style.background = "#d3d6d8";
+                     btn.onmouseout = () => btn.style.background = "#e9ecef";
+                 }
+                 
+                 let btnName = "";
+                 if (currentSection === 'writing') {
+                     let shortName = currentMode === 'practice' ? "P" : (task.title.includes("Test 1") ? "T1" : "T2");
+                     btnName = task.title.includes("Task 1") ? `${shortName} - Task 1` : `${shortName} - Task 2`;
+                 } else {
+                     let order = (i - bounds.min) + 1;
+                     btnName = currentMode === 'practice' ? `Práctica ${order}` : `Part ${order}`;
+                 }
+                 
+                 btn.innerText = btnName;
+                 
+                 btn.onclick = () => {
+                    saveCurrentAnswers(); 
+                    if (currentMode === 'practice') {
+                        examFinished = false; 
+                        isExamRunning = false;
+                    }
+                    currentIndex = i;
+                    if(currentSection === 'writing') loadWritingTask();
+                    else renderTask(); 
+                };
+                 navContainer.appendChild(btn);
+             }
+         }
+
         function renderTask() {
             const contentArea = document.getElementById('content-area');
             const taskList = ieltsData[currentSection][currentMode];
-
-            if (!taskList || taskList.length === 0) {
-                contentArea.innerHTML = `<div class="task-block"><p style="text-align:center; color:#777;">La base de datos para esta sección se cargará en los siguientes pasos.</p></div>`;
-                document.getElementById('btn-prev').disabled = true;
-                document.getElementById('btn-next').disabled = true;
-                return;
-            }
+            if (!taskList || taskList.length === 0) return;
 
             const task = taskList[currentIndex];
-            let html = `<div class="task-header"><h2>Task ${currentIndex + 1} of ${taskList.length}: ${task.title}</h2></div>`;
+            let html = `<div class="task-header"><h2>${task.title}</h2></div>`;
 
-            // Renderizar Multimedia / Textos / Tablas incrustadas
-            // Renderizar Multimedia / Textos / Tablas incrustadas
             if (task.type === 'audio') {
-            html += `
-            <div class="audio-container">
-            <audio controls preload="auto" onplay="if(!this.dataset.loaded){ this.load(); this.play(); this.dataset.loaded=true; }">
-            <source src="${task.src}" type="audio/ogg">
-            <source src="${task.src.replace('.ogg', '.mp3')}" type="audio/mpeg">
-            Tu navegador no soporta el elemento de audio.
-            </audio>
-            </div>
-            <details>
-            <summary>View Transcript</summary>
-            <div style="margin-top:10px;">${task.transcript}</div>
-            </details>
-            `;
+                html += `
+                <div class="audio-container">
+                <audio controls preload="auto" onplay="if(!this.dataset.loaded){ this.load(); this.play(); this.dataset.loaded=true; }">
+                <source src="${task.src}" type="audio/ogg">
+                <source src="${task.src.replace('.ogg', '.mp3')}" type="audio/mpeg">
+                </audio>
+                </div>
+                <details><summary>View Transcript</summary><div style="margin-top:10px;">${task.transcript}</div></details>`;
                 if (task.content) html += `<div>${task.content}</div>`;
             } else if (task.type === 'reading') {
                 if (task.content) html += `<div class="reading-text">${task.content}</div>`;
             }
 
-            // Renderizar Preguntas Estándar (Radio, Checkbox, Textos simples)
             if (task.questions && task.questions.length > 0) {
                 task.questions.forEach((q) => {
-                    // Si la pregunta está embebida en un HTML previo (ej. Mapas o Tablas), no la dibujamos de nuevo, 
-                    // solo la registramos para validación. Lo controlaremos con un flag "embedded: true".
                     if(q.embedded) return; 
+                    html += `<div class="question-block" id="block-${q.id}"><div class="question-text">${q.text}</div>`;
 
-                    html += `<div class="question-block" id="block-${q.id}">
-                                <div class="question-text">${q.text}</div>`;
-
-                    if (q.type === 'radio') {
+                    if (q.type === 'radio' || q.type === 'checkbox') {
+                        const inputType = q.type;
                         html += `<div class="options-group">`;
                         q.options.forEach((opt, optIndex) => {
-                            html += `<label><input type="radio" name="${q.id}" value="${optIndex}"> <span>${opt}</span> <span class="feedback-icon"></span></label>`;
+                            html += `<label><input type="${inputType}" name="${q.id}" value="${optIndex}"> <span>${opt}</span> <span class="feedback-icon"></span></label>`;
                         });
                         html += `</div>`;
-                    } else if (q.type === 'checkbox') {
-                        html += `<div class="options-group">`;
-                        q.options.forEach((opt, optIndex) => {
-                            html += `<label><input type="checkbox" name="${q.id}" value="${optIndex}"> <span>${opt}</span> <span class="feedback-icon"></span></label>`;
-                        });
-                        html += `</div>`;
-                    } else if (q.type === 'text' || q.type === 'select') {
-                        // Para dropdowns simples o cajas de texto
-                        if(q.type === 'text'){
-                            html += `<input type="text" id="${q.id}" placeholder="Escribe tu respuesta..."><span class="feedback-icon"></span>`;
-                        } else {
-                            html += `<select id="${q.id}"><option value="">Select...</option>`;
-                            q.options.forEach(opt => html += `<option value="${opt}">${opt}</option>`);
-                            html += `</select><span class="feedback-icon"></span>`;
-                        }
+                    } else if (q.type === 'text') {
+                        html += `<input type="text" id="${q.id}" placeholder="Escribe tu respuesta..."><span class="feedback-icon"></span>`;
+                    } else if (q.type === 'select') {
+                        html += `<select id="${q.id}"><option value="">Select...</option>`;
+                        q.options.forEach(opt => html += `<option value="${opt}">${opt}</option>`);
+                        html += `</select><span class="feedback-icon"></span>`;
                     }
                     html += `</div>`;
                 });
@@ -1542,76 +1797,427 @@
 
             contentArea.innerHTML = html;
 
-            // Actualizar estado de botones de navegación
-            document.getElementById('btn-prev').disabled = (currentIndex === 0);
-            document.getElementById('btn-next').disabled = (currentIndex === taskList.length - 1);
+            const bounds = getNavigationBoundaries();
+            document.getElementById('btn-prev').disabled = (currentIndex === bounds.min);
+            document.getElementById('btn-next').disabled = (currentIndex === bounds.max);
+
+            renderMainNavigation();
+            restoreAnswers();
+
+            if (!isExamRunning && !examFinished && currentMode === 'exercises') {
+                document.querySelectorAll('#content-area input, #content-area select').forEach(el => el.disabled = true);
+            }
+
+            if(examFinished) applyVisualFeedback();
+        }
+
+        // WRITING UI UNIFICADA
+        function loadWritingTask() {
+            const task = ieltsWritingData[currentMode][currentIndex];
+            
+            const titleEl = document.getElementById('writing-task-title');
+            const promptEl = document.getElementById('writing-task-prompt');
+            const feedbackEl = document.getElementById('writing-feedback-panel');
+            
+            if (titleEl) titleEl.innerText = task.title;
+            if (promptEl) promptEl.innerHTML = task.prompt;
+            
+            if (feedbackEl) {
+                feedbackEl.innerHTML = `<h4 style="color: var(--text-light); text-align: center; margin-top: 6rem; font-weight: normal;">Tu evaluación por criterios y el ensayo modelo Banda 9.0 aparecerán en este panel.</h4>`;
+            }
+
+            const bounds = getNavigationBoundaries();
+            document.getElementById('btn-prev').disabled = (currentIndex === bounds.min);
+            document.getElementById('btn-next').disabled = (currentIndex === bounds.max);
+
+            restoreAnswers();
+            updateWordCount();
+            renderMainNavigation();
+            
+            if (!isExamRunning && !examFinished && currentMode === 'exercises') {
+                const ta = document.getElementById('writing-textarea');
+                if (ta) ta.disabled = true;
+            } else if (!examFinished) {
+                const ta = document.getElementById('writing-textarea');
+                if (ta) ta.disabled = false;
+            }
+        }
+
+        function updateWordCount() {
+            const textarea = document.getElementById('writing-textarea');
+            if (!textarea) return;
+            
+            const text = textarea.value.trim();
+            const words = text ? text.split(/\s+/).length : 0;
+            const target = ieltsWritingData[currentMode][currentIndex] ? ieltsWritingData[currentMode][currentIndex].targetWords : 150;
+            
+            const countEl = document.getElementById('writing-word-count');
+            const statusEl = document.getElementById('writing-target-status');
+            
+            if (countEl) countEl.innerText = words;
+            if (statusEl) {
+                if (words >= target) {
+                    statusEl.innerText = "Target reached!";
+                    statusEl.style.color = "var(--correct-color)";
+                } else {
+                    statusEl.innerText = `Faltan ${target - words} palabras`;
+                    statusEl.style.color = "var(--incorrect-color)";
+                }
+            }
         }
 
         /* =========================================
-           5. ALGORITMO DEL EXAMINADOR (VALIDACIÓN)
-           ========================================= */
-        function checkAnswers() {
-            const task = ieltsData[currentSection][currentMode][currentIndex];
-            if(!task || !task.questions) return;
-
-            task.questions.forEach(q => {
-                let elementBlock = document.getElementById(`block-${q.id}`);
-                // Si está embebido en una tabla, el bloque padre a colorear será el mismo input
-                if(q.embedded) elementBlock = document.getElementById(q.id); 
-                
-                if(!elementBlock) return;
-                elementBlock.classList.remove('correct-bg', 'incorrect-bg');
-
-                if (q.type === 'radio') {
-                    const selected = document.querySelector(`input[name="${q.id}"]:checked`);
-                    
-                    // Limpiar clases previas
-                    document.querySelectorAll(`input[name="${q.id}"]`).forEach(el => {
-                        el.closest('label').classList.remove('correct-bg', 'incorrect-bg');
-                    });
-
-                    if (selected) {
-                        const label = selected.closest('label');
-                        if (parseInt(selected.value) === q.answer) {
-                            label.classList.add('correct-bg');
-                        } else {
-                            label.classList.add('incorrect-bg');
-                        }
-                    } else {
-                        elementBlock.classList.add('incorrect-bg');
-                    }
-                } 
-                else if (q.type === 'checkbox') {
-                    const selectedBoxes = Array.from(document.querySelectorAll(`input[name="${q.id}"]:checked`)).map(cb => parseInt(cb.value));
-                    const isCorrect = JSON.stringify(selectedBoxes.sort()) === JSON.stringify(q.answers.sort());
-                    
-                    if (selectedBoxes.length > 0) {
-                        elementBlock.classList.add(isCorrect ? 'correct-bg' : 'incorrect-bg');
-                    } else {
-                        elementBlock.classList.add('incorrect-bg');
-                    }
-                } 
-                else if (q.type === 'text' || q.type === 'select') {
-                    const inputEl = document.getElementById(q.id);
-                    if(inputEl) {
-                        const inputVal = inputEl.value.trim().toLowerCase();
-                        
-                        // Soporta múltiples respuestas correctas (ej. "scientist" o "scientists")
-                        let isCorrect = false;
-                        if (Array.isArray(q.answer)) {
-                            isCorrect = q.answer.some(ans => ans.toLowerCase() === inputVal);
-                        } else {
-                            isCorrect = (inputVal === q.answer.toLowerCase());
-                        }
-
-                        inputEl.classList.remove('correct-bg', 'incorrect-bg');
-                        inputEl.classList.add(isCorrect ? 'correct-bg' : 'incorrect-bg');
-                    }
-                }
-            });
-        }
+         SISTEMA DE TEMPORIZADOR INTELIGENTE
+         ========================================= */
+         function getSectionTime() {
+             // Tiempos reales del IELTS
+             if (currentSection === 'writing') return 60 * 60; // 60 min para las 2 tareas del test
+             if (currentSection === 'reading') return 60 * 60; // 60 min para todo Reading
+             return 30 * 60; // 30 min Listening
+         }
         
-        // Inicializar la interfaz visualmente
+         function showPracticeCheckButton(show) {
+            let btn = document.getElementById('btn-practice-check');
+            const actionArea = document.getElementById('action-buttons-area');
+            
+            // En writing ya tienen botones abajo de IA y Modelo, no hace falta este botón extra.
+            if (currentSection === 'writing') show = false; 
+
+            if (show) {
+                if (!btn && actionArea) {
+                    btn = document.createElement('button');
+                    btn.id = 'btn-practice-check';
+                    btn.className = 'btn btn-check';
+                    btn.innerText = 'Evaluar Práctica';
+                    btn.onclick = finishExam; 
+                    actionArea.insertBefore(btn, document.getElementById('btn-next'));
+                } else if (btn) {
+                    btn.style.display = 'inline-block';
+                }
+            } else {
+                if (btn) btn.style.display = 'none';
+            }
+         }
+
+         function resetTimerUI() {
+             clearInterval(examCountdown);
+             isExamRunning = false;
+             examFinished = false; 
+             
+             const isPractice = (currentMode === 'practice');
+
+             const timerHeader = document.getElementById('timer-header');
+             const btnStart = document.getElementById('btn-start-timer');
+             const btnFinish = document.getElementById('btn-finish-exam');
+             
+             const oldScore = document.getElementById('score-panel');
+             if(oldScore) oldScore.remove();
+
+             if (isPractice) {
+                 if(timerHeader) timerHeader.style.display = 'none';
+                 document.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+                 showPracticeCheckButton(true);
+             } else {
+                 if(timerHeader) timerHeader.style.display = 'block';
+                 document.getElementById('timer-warning').style.display = 'none';
+                 if(btnStart) btnStart.style.display = 'inline-block';
+                 if(btnFinish) btnFinish.style.display = 'none';
+                 
+                 secondsLeft = getSectionTime();
+                 updateTimerDisplay();
+                 
+                 document.querySelectorAll('#content-area input, #content-area select, #writing-textarea').forEach(el => el.disabled = true);
+                 showPracticeCheckButton(false);
+             }
+         }
+        
+         function updateTimerDisplay() {
+             const display = document.getElementById('timer-display');
+             if(!display) return;
+             
+             let displaySecs = Math.max(0, secondsLeft);
+             const m = Math.floor(displaySecs / 60).toString().padStart(2, '0');
+             const s = (displaySecs % 60).toString().padStart(2, '0');
+             display.innerText = `${m}:${s}`;
+             
+             if (secondsLeft <= 180 && secondsLeft > 0) { 
+                 display.style.color = "var(--incorrect-color)";
+             } else {
+                 display.style.color = "var(--text-color)";
+             }
+         }
+        
+         function startExam() {
+             isExamRunning = true;
+             document.getElementById('btn-start-timer').style.display = 'none';
+             
+             const btnFinish = document.getElementById('btn-finish-exam');
+             if(btnFinish) btnFinish.style.display = 'inline-block';
+             
+             document.querySelectorAll('#content-area input, #content-area select, #writing-textarea').forEach(el => el.disabled = false);
+        
+             examCountdown = setInterval(() => {
+                 secondsLeft--;
+                 updateTimerDisplay();
+        
+                 if (secondsLeft <= 0) {
+                     clearInterval(examCountdown);
+                     document.getElementById('timer-warning').style.display = 'block';
+                     finishExam(); 
+                 }
+             }, 1000);
+         }
+
+        /* =========================================
+           5. ALGORITMO DEL EXAMINADOR POR BLOQUES (TEST)
+           ========================================= */
+         function saveAndNext() {
+             changeTask(1); 
+         }
+
+         function finishExam() {
+             if (examFinished) return; 
+             saveCurrentAnswers(); 
+             clearInterval(examCountdown); 
+             examFinished = true;
+             isExamRunning = false;
+             
+             const btnFinish = document.getElementById('btn-finish-exam');
+             if(btnFinish) btnFinish.style.display = 'none';
+             showPracticeCheckButton(false);
+             
+             const containerToAttach = currentSection === 'writing' ? document.getElementById('writing-area') : document.getElementById('content-area');
+             
+             let scorePanel = document.getElementById('score-panel');
+             if(scorePanel) scorePanel.remove();
+             scorePanel = document.createElement('div');
+             scorePanel.id = 'score-panel';
+             scorePanel.style.cssText = "background: #d1e7dd; padding: 2rem; text-align: center; border-radius: 8px; margin-bottom: 2rem; border: 2px solid #198754;";
+
+             if (currentSection === 'writing') {
+                 const ta = document.getElementById('writing-textarea');
+                 if(ta) ta.disabled = true;
+                 
+                 scorePanel.innerHTML = `
+                     <h2 style="color: #0f5132;">¡${currentMode === 'practice' ? 'Práctica' : 'Test'} Finalizado!</h2>
+                     <p>El tiempo se ha detenido. Haz clic en "AI Evaluation" abajo para revisar tu ensayo.</p>
+                     <button class="btn" style="margin-top:15px; background:var(--primary-color); color:white;" onclick="retryExam()">Rehacer</button>`;
+                 containerToAttach.insertBefore(scorePanel, containerToAttach.firstChild);
+                 return;
+             }
+
+             // Evaluación solo del Scope Actual (Test 1, Test 2, o Practice)
+             let totalQuestions = 0;
+             let correctAnswers = 0;
+             const taskList = ieltsData[currentSection][currentMode];
+             const evalBounds = getEvaluationBoundaries();
+             
+             for(let i = evalBounds.min; i <= evalBounds.max; i++) {
+                 const task = taskList[i];
+                 if(!task.questions) continue;
+                 
+                 task.questions.forEach(q => {
+                     totalQuestions++;
+                     const userVal = userAnswers[q.id];
+                     let isCorrect = false;
+        
+                     if (q.type === 'radio') {
+                         isCorrect = (userVal !== undefined && parseInt(userVal) === q.answer);
+                     } else if (q.type === 'checkbox') {
+                         if(userVal && Array.isArray(userVal)) {
+                              const selectedBoxes = userVal.map(v => parseInt(v)).sort();
+                              const correctBoxes = [...q.answers].sort();
+                              isCorrect = JSON.stringify(selectedBoxes) === JSON.stringify(correctBoxes);
+                         }
+                     } else if (q.type === 'text' || q.type === 'select') {
+                         if(userVal !== undefined) {
+                             const inputStr = userVal.trim().toLowerCase();
+                             if (Array.isArray(q.answer)) isCorrect = q.answer.some(ans => ans.toLowerCase() === inputStr);
+                             else isCorrect = (inputStr === q.answer.toLowerCase());
+                         }
+                     }
+                     if(isCorrect) correctAnswers++;
+                 });
+             }
+        
+             const percentage = totalQuestions > 0 ? correctAnswers / totalQuestions : 0;
+             let band = 0;
+             if(percentage >= 0.9) band = "8.0 - 9.0";
+             else if(percentage >= 0.75) band = "7.0 - 7.5";
+             else if(percentage >= 0.6) band = "6.0 - 6.5";
+             else if(percentage >= 0.4) band = "5.0 - 5.5";
+             else band = "Debajo de 5.0";
+        
+             scorePanel.innerHTML = `
+                 <h2 style="color: #0f5132; margin-bottom: 10px;">¡${currentMode === 'practice' ? 'Práctica' : 'Test'} Finalizado!</h2>
+                 <h3 style="font-size: 1.8rem; color: #146c43;">Puntuación: ${correctAnswers} / ${totalQuestions}</h3>
+                 <h4 style="color: #198754; margin-top: 10px;">Banda Estimada: ${band}</h4>
+                 <p style="margin-top: 10px;">Usa los botones de navegación de arriba para revisar tus errores (rojo) y aciertos (verde).</p>
+                 <button class="btn" style="margin-top:15px; background:var(--primary-color); color:white;" onclick="retryExam()">Rehacer</button>`;
+             
+             containerToAttach.insertBefore(scorePanel, containerToAttach.firstChild);
+             applyVisualFeedback(); 
+         }
+         
+         function retryExam() {
+             const evalBounds = getEvaluationBoundaries();
+             if (currentSection === 'writing') {
+                 for(let i = evalBounds.min; i <= evalBounds.max; i++) {
+                     delete userAnswers[`writing_${currentMode}_${i}`];
+                 }
+                 examFinished = false;
+                 currentIndex = evalBounds.min; 
+                 loadWritingTask();
+                 resetTimerUI();
+             } else {
+                 const taskList = ieltsData[currentSection][currentMode];
+                 for(let i = evalBounds.min; i <= evalBounds.max; i++) {
+                     if(taskList[i].questions) {
+                         taskList[i].questions.forEach(q => delete userAnswers[q.id]);
+                     }
+                 }
+                 examFinished = false;
+                 currentIndex = evalBounds.min;
+                 renderTask(); 
+                 resetTimerUI(); 
+             }
+         }
+        
+         function applyVisualFeedback() {
+             const task = ieltsData[currentSection][currentMode][currentIndex];
+             if(!task || !task.questions) return;
+        
+             task.questions.forEach(q => {
+                 let elementBlock = document.getElementById(`block-${q.id}`);
+                 if(q.embedded) elementBlock = document.getElementById(q.id); 
+                 if(!elementBlock) return;
+                 
+                 elementBlock.classList.remove('correct-bg', 'incorrect-bg');
+                 const userVal = userAnswers[q.id];
+        
+                 if (q.type === 'radio') {
+                     document.querySelectorAll(`input[name="${q.id}"]`).forEach(el => {
+                         el.disabled = true; 
+                         el.closest('label').classList.remove('correct-bg', 'incorrect-bg');
+                     });
+                     if (userVal !== undefined) {
+                         const selectedEl = document.querySelector(`input[name="${q.id}"][value="${userVal}"]`);
+                         if(selectedEl) {
+                             const label = selectedEl.closest('label');
+                             if (parseInt(userVal) === q.answer) label.classList.add('correct-bg');
+                             else label.classList.add('incorrect-bg');
+                         }
+                     } else elementBlock.classList.add('incorrect-bg'); 
+                 } 
+                 else if (q.type === 'checkbox') {
+                     document.querySelectorAll(`input[name="${q.id}"]`).forEach(el => {
+                         el.disabled = true;
+                         el.closest('label').classList.remove('correct-bg', 'incorrect-bg');
+                     });
+                     const userArr = Array.isArray(userVal) ? userVal.map(v => parseInt(v)).sort() : [];
+                     const correctArr = [...q.answers].sort();
+                     const isCorrect = JSON.stringify(userArr) === JSON.stringify(correctArr);
+                     
+                     elementBlock.classList.add(isCorrect ? 'correct-bg' : 'incorrect-bg');
+                 }
+                 else if (q.type === 'text' || q.type === 'select') {
+                     const inputEl = document.getElementById(q.id);
+                     if(inputEl) {
+                         inputEl.disabled = true;
+                         const inputStr = (userVal || "").trim().toLowerCase();
+                         let isCorrect = false;
+                         if (Array.isArray(q.answer)) isCorrect = q.answer.some(ans => ans.toLowerCase() === inputStr);
+                         else isCorrect = (inputStr === q.answer.toLowerCase());
+                         
+                         inputEl.classList.add(isCorrect ? 'correct-bg' : 'incorrect-bg');
+                     }
+                 }
+             });
+         }
+        
+        // ------------------ FUNCIONES AI DE WRITING ------------------
+        function checkWritingLocally() {
+            const taskList = ieltsWritingData[currentMode];
+            if (!taskList || !taskList[currentIndex]) return;
+            const task = taskList[currentIndex];
+            const panel = document.getElementById('writing-feedback-panel');
+            
+            if (panel) {
+                panel.innerHTML = `
+                    <h3 style="color: var(--primary-color); margin-bottom:1rem;">Official Sample Answer</h3>
+                    <div style="background: #f8f9fa; padding: 1.2rem; border-left: 4px solid #198754; border-radius: 4px; font-size:0.95rem; line-height:1.6; max-height:320px; overflow-y:auto;">
+                        ${task.modelAnswer}
+                    </div>
+                `;
+            }
+        }
+
+        async function analyzeWithFreeAI() {
+            const panel = document.getElementById('writing-feedback-panel');
+            const textarea = document.getElementById('writing-textarea');
+            
+            if (!textarea || !panel) return;
+            
+            const essay = textarea.value.trim();
+            const task = ieltsWritingData[currentMode][currentIndex];
+        
+            if (!essay) {
+                alert("Por favor, escribe tu respuesta en el cuadro de texto antes de solicitar la evaluación de la IA.");
+                return;
+            }
+        
+            panel.innerHTML = `<h4 style="text-align:center; margin-top:6rem; color: var(--secondary-color); font-weight: normal;">Conectando con el servidor de Gemini... Por favor espera.</h4>`;
+        
+            const isTask1 = task.title.includes("Task 1");
+            const taskCriterion = isTask1 ? "Task Achievement" : "Task Response";
+        
+            const systemPrompt = `Actúas como un examinador oficial experto de IELTS Certificado. Evalúa el siguiente ensayo escrito en base a este enunciado exacto: "${task.prompt}".
+            El ensayo del alumno es: "${essay}".
+            
+            Entrega tu respuesta estructurada en HTML limpio (usa etiquetas <p>, <ul>, <li>, <strong>). Debes incluir de forma estricta:
+            1. Overall Band Score (Escala 1.0 a 9.0).
+            2. Puntuación desglosada y retroalimentación breve por cada uno de los 4 criterios oficiales de IELTS (${taskCriterion}, Coherence and Cohesion, Lexical Resource, Grammatical Range and Accuracy).
+            3. Una sección llamada "Correcciones sugeridas" en formato de lista mostrando el texto original y cómo mejorarlo.
+            Responde en español, pero mantén los términos de los criterios y las correcciones en inglés. Importante: No envuelvas tu respuesta en bloques de código markdown.`;
+        
+            try {
+                const response = await fetch("/.netlify/functions/analyze", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ promptText: systemPrompt })
+                });
+        
+                const textResponse = await response.text(); 
+                
+                if (!response.ok) {
+                    throw new Error(`Error de Netlify (HTTP ${response.status}): ${textResponse}`);
+                }
+        
+                const data = JSON.parse(textResponse);
+                
+                if (data.error) {
+                    const mensajeReal = data.error.message || JSON.stringify(data.error);
+                    throw new Error(`Rechazo de Google: ${mensajeReal}`);
+                }
+                
+                if (data.candidates && data.candidates[0].content.parts[0].text) {
+                    let resultText = data.candidates[0].content.parts[0].text;
+                    resultText = resultText.replace(/```html/g, "").replace(/```/g, "");
+                    panel.innerHTML = `<div style="line-height:1.6; font-size:0.95rem;">${resultText}</div>`;
+                } else {
+                    throw new Error("Respuesta incompleta: " + textResponse.substring(0, 100));
+                }
+            } catch (error) {
+                panel.innerHTML = `
+                    <div style="color: var(--incorrect-color); padding: 1.5rem; text-align:left; border: 1px dashed var(--incorrect-color); font-size: 0.95rem; background: #fff3f3;">
+                        <strong style="font-size:1.1rem;">Diagnóstico del Servidor:</strong><br><br>
+                        <code>${error.message}</code><br><br>
+                        <span style="color:#555;">Si el error persiste, revisa tu conexión a internet.</span>
+                    </div>`;
+            }
+        }
+
+        // Inicializar la aplicación
         setSection('listening', document.querySelector('.nav-btn.active'));
     </script>
         
